@@ -650,34 +650,68 @@ function renderMarkdown(text){
     .replace(/\n/g,'<br>');
 }
 
-// Stream narrator text directly into a log bubble
+// Stream narrator text — fetch streams in background, then typewrite smoothly
 async function streamDM(system, messages, maxTokens=1000){
+  // Remove typing indicator
   const ty=$('game-log').querySelector('.le-d:last-child .ty');
   if(ty)ty.closest('.le-d')?.remove();
 
+  // Create bubble immediately so user sees it appearing
   const el=document.createElement('div');el.className='le-d';
   const lb=document.createElement('div');lb.className='lb';
-  lb.style.whiteSpace='normal'; // allow HTML rendering
+  lb.style.whiteSpace='normal';
+  const waitCursor=document.createElement('span');waitCursor.className='tw-cursor';
+  lb.appendChild(waitCursor);
   el.innerHTML='<div class="ll">Narrator</div>';
   el.appendChild(lb);
   $('game-log').appendChild(el);
   scrollL();
 
-  let buffer='';
-  const cursor=document.createElement('span');cursor.className='tw-cursor';
-
+  // Stream silently in background — show a progress indicator only
+  let charCount=0;
   const full=await callAIStream(system,messages,maxTokens,(chunk,fullSoFar)=>{
-    buffer=fullSoFar;
-    const display=stripStatTags(buffer);
-    lb.innerHTML=renderMarkdown(display);
-    lb.appendChild(cursor);
-    scrollL();
+    charCount=fullSoFar.length;
+    // Just pulse the cursor to show activity — no jittery text updates
+    waitCursor.style.opacity=charCount%20<10?'1':'0.3';
   });
 
-  cursor.remove();
-  // Final clean render
-  lb.innerHTML=renderMarkdown(stripStatTags(full));
+  waitCursor.remove();
+
+  // Now typewrite the clean text smoothly
+  const display=stripStatTags(full);
+  await typewriteHTML(lb, display);
   scrollL();
+  return full;
+}
+
+// Typewrite plain text into element smoothly, scrolling only at end of each line
+function typewriteHTML(el, text, speed=12){
+  return new Promise(resolve=>{
+    const rendered=renderMarkdown(text);
+    // Strip HTML to get plain chars for typing, then reveal rendered HTML progressively
+    const plain=text.replace(/<[^>]+>/g,'');
+    el.innerHTML='';
+    const cursor=document.createElement('span');cursor.className='tw-cursor';
+    el.appendChild(cursor);
+    let i=0;
+    // Type character by character into a text buffer, render markdown of buffer
+    let buf='';
+    const t=setInterval(()=>{
+      if(i<text.length){
+        buf+=text[i]; i++;
+        el.innerHTML=renderMarkdown(buf);
+        el.appendChild(cursor);
+        // Only scroll when reaching end of a sentence or paragraph — not every character
+        if('.!?\n'.includes(text[i-1])) scrollL();
+      } else {
+        clearInterval(t);
+        cursor.remove();
+        el.innerHTML=renderMarkdown(text);
+        resolve();
+      }
+    },speed);
+  });
+}
   return full;
 }
 
