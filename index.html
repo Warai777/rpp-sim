@@ -681,7 +681,7 @@ function renderMarkdown(text){
 }
 
 // Stream narrator text directly — no auto-scroll, player controls reading
-async function streamDM(system, messages, maxTokens=1000){
+async function streamDM(system, messages, maxTokens=2000){
   const ty=$('game-log').querySelector('.le-d:last-child .ty');
   if(ty)ty.closest('.le-d')?.remove();
 
@@ -842,6 +842,7 @@ async function createAndBegin(){
 
 dm_prompt (~350 words): Rich narrator persona. Second-person narration. Vivid scene-setting. Faithful to world lore. Use VS Battles wiki terminology for power levels — Tier, Attack Potency, Speed, Durability, Intelligence classifications. Power systems ONLY discovered through play. Universal Shop exists outside reality — rare access moments only. Stat tags when values change: [HP: X] [BERRY: X] [DAY: N] [LOCATION: name] [TIME: name] [STAGE: text] [POWER_SYSTEM: name] [POWER_LEVEL: level] [TIER: text] [ATK: text] [SPD: text] [DUR: text] [INT: text]. Track consequences. Maintain world tone.
 CRITICAL: NEVER write choice menus, option lists, [A]/[B]/[C] choices, "Your options are:", or any kind of numbered/lettered action list in responses. The interface handles choices automatically. Just narrate the scene and end on tension or an open moment. The player decides what to do.
+STRICT IMMERSION: Only narrate what the player character can directly observe right now. NEVER reference future plot events, future character actions, or story outcomes the player hasn't discovered yet. NEVER reveal other characters' private thoughts or plans. NEVER get canon facts wrong — gender, names, abilities must be exact. Characters only know what they currently know in the story — no prophecy, no destiny spoilers, no omniscient narrator leaks.
 canon_rules: Short paragraph of 3-5 core world physics/rules.
 starting_location: Single evocative place name fitting this world and character backstory.
 starting_time: One of Dawn/Morning/Afternoon/Evening/Night.
@@ -896,7 +897,7 @@ async function genOpening(world,gs,ps){
     const orders=await sbG('standing_orders',`world_id=eq.${curWorldId}&select=rule_text`).catch(()=>[]);
     const ctx=buildCtx(gs,ps,orders,null,null,world.canon_rules);
     ty.remove();$('game-log').innerHTML='';
-    const text=await streamDM(world.dm_system_prompt+'\n\n'+ctx,[{role:'user',content:`Begin the story. Open scene for ${cn} in ${gs.current_location}. Vivid atmosphere — what they see, hear, sense, smell. DO NOT grant any power system or abilities yet. Hint at the world's power without giving access. End with a moment of tension or clear first choice. Include: [LOCATION: ${gs.current_location}] [TIME: ${gs.current_time_of_day}]`}]);
+    const text=await streamDM(world.dm_system_prompt+'\n\n'+ctx,[{role:'user',content:`Begin the story. Open scene for ${cn} in ${gs.current_location}. Vivid atmosphere — what they see, hear, sense, smell. DO NOT grant any power system or abilities yet. Hint at the world's power without giving access. End with a moment of tension or clear first choice. Include: [LOCATION: ${gs.current_location}] [TIME: ${gs.current_time_of_day}]`}],2000);
     await sbP('conversation_history',{world_id:curWorldId,role:'assistant',content:text,scene_number:1});
     parseStats(text);await genOptions(text,world);
   }catch(e){ty.remove();addSys('Error: '+e.message);}
@@ -1030,7 +1031,18 @@ function buildCtx(gs,ps,orders,inv,al,canon){
   if(inv?.length)p.push('\n=== INVENTORY ===\n'+inv.map(i=>`${i.item_name} x${i.quantity} [${i.status}]${i.notes?' — '+i.notes:''}`).join('\n'));
   if(al?.length)p.push('\n=== ALLIES ===\n'+al.map(a=>`${a.name} (${a.relationship}) — ${a.status}`).join('\n'));
   if(canon)p.push('\n=== WORLD CANON ===\n'+canon);
-  p.push('\n=== NARRATOR RULES ===\nNEVER write choice menus, [A]/[B]/[C] options, numbered action lists, or "Your options are:" prompts. The interface generates choices automatically. Just narrate — describe what happens, what the character perceives, consequences of actions. End on an open moment or tension. Let the player decide.');
+  p.push(`\n=== NARRATOR RULES ===
+NEVER write choice menus, [A]/[B]/[C] options, numbered action lists, or "Your options are:" prompts. The interface generates choices automatically.
+STRICT IMMERSION — CRITICAL:
+- Narrate ONLY what the player character can directly see, hear, smell, or sense RIGHT NOW in this scene. Nothing else.
+- NEVER reference future plot events, prophecies, or things that haven't happened yet in the current story.
+- NEVER reveal what other characters are privately thinking, planning, or waiting for unless the player has learned this through interaction.
+- NEVER use your knowledge of the source material's storyline to narrate events that haven't occurred yet in this playthrough.
+- NEVER get character facts wrong — gender, appearance, name, abilities must match canon exactly.
+- Canon characters in the world exist as they are at this point in the story — do not reference their future actions or destiny.
+- If Zoro is tied to a post, he is tied to a post. He is not "waiting for someone." He does not know anyone is coming. Narrate only what is observable.
+- The player character discovers the world through play, not through narrator omniscience.`);
+
   return p.join('\n');
 }
 
