@@ -1,8 +1,11 @@
 const fs = require('fs');
+const api = (process.env.ANTHROPIC_API_KEY || '').trim();
+const url = (process.env.SUPABASE_URL || '').trim();
+const key = (process.env.SUPABASE_KEY || '').trim();
 let html = fs.readFileSync('index.html', 'utf8');
-html = html.replace('__ANTHROPIC_KEY__', process.env.ANTHROPIC_API_KEY || '');
-html = html.replace('__SUPABASE_URL__', process.env.SUPABASE_URL || '');
-html = html.replace('__SUPABASE_KEY__', process.env.SUPABASE_KEY || '');
+html = html.replace("'__ANTHROPIC_KEY__'", JSON.stringify(api));
+html = html.replace("'__SUPABASE_URL__'", JSON.stringify(url));
+html = html.replace("'__SUPABASE_KEY__'", JSON.stringify(key));
 fs.mkdirSync('dist', {recursive:true});
 fs.writeFileSync('dist/index.html', html);
-console.log('Built successfully');
+console.log('Built. api:', !!api, 'url:', !!url, 'key:', !!key);
