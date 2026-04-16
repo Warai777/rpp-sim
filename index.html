@@ -964,8 +964,13 @@ async function delOrder(id){if(!confirm('Delete?'))return;try{await sbD('standin
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function checkMob(){const t=$('mob-tog');if(t)t.style.display=window.innerWidth<=640?'flex':'none';}
 function toggleSidebar(){$('sidebar').classList.toggle('mob');}
-window.addEventListener('resize',checkMob);
-loadWorlds();checkMob();
+window.addEventListener('resize',checkMob);if(!ls('chron_api')||!ls('chron_url')||!ls('chron_key')){
+  localStorage.setItem('chron_api','__ANTHROPIC_KEY__');
+  localStorage.setItem('chron_url','__SUPABASE_URL__');
+  localStorage.setItem('chron_key','__SUPABASE_KEY__');
+}
+loadWorlds();
+checkMob();
 </script>
 </body>
 </html>
