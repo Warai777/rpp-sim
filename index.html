@@ -19,6 +19,7 @@
   body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden;}
   ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:var(--bg2);}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
   .screen{display:none;min-height:100vh;flex-direction:column;}.screen.active{display:flex;}
+  #auth.active{justify-content:center;align-items:center;}
   .topbar{display:flex;align-items:center;justify-content:space-between;padding:11px 20px;border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0;z-index:50;flex-shrink:0;}
   .logo{font-size:15px;font-weight:700;color:var(--accent);letter-spacing:.06em;}
   .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;color:var(--text);font-size:13px;font-family:var(--font);cursor:pointer;transition:all .14s;white-space:nowrap;}
@@ -210,7 +211,7 @@
 
 <!-- HOME -->
 
-<div id="home" class="screen" style="display:none;">
+<div id="home" class="screen">
   <div class="topbar">
     <span class="logo">⚔ CHRONICLE RPG</span>
     <div style="display:flex;gap:8px;align-items:center;">
@@ -554,17 +555,12 @@ async function doSignup(){
 
 function doLogout(){
   currentUser=null;localStorage.removeItem('chron_session');
-  document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.display='';});
-  $('auth').classList.add('active');
-  $('auth').style.display='flex';
+  nav('auth');
 }
 
 function enterApp(){
   $('user-label').textContent=currentUser.name||currentUser.email;
-  document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.display='';});
-  $('home').style.display='flex';
-  $('home').classList.add('active');
-  loadWorlds();
+  nav('home');loadWorlds();
 }
 
 // Override sb() to include auth token when available
@@ -698,7 +694,10 @@ async function streamDM(system, messages, maxTokens=1000){
 //  UTILS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const $=id=>document.getElementById(id);
-function nav(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
+function nav(id){
+  document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.display='none';});
+  const target=$(id);target.style.display='';target.classList.add('active');
+}
 function goHome(){nav('home');loadWorlds();}
 function toast(msg,type=''){const t=$('toast');t.textContent=msg;t.className='toast show '+type;clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3200);}
 function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):''; }
