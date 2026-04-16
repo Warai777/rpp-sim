@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chronicle RPG</title>
+<title>Elysiad — The Ultimate RPG</title>
 <style>
   :root {
     --bg:#0d0d0f;--bg2:#141418;--card:#1e1e27;--hover:#252530;
@@ -175,7 +175,10 @@
 .auth-err{font-size:12px;color:var(–red);margin-bottom:12px;min-height:16px;}
 
 @media(max-width:640px){
-.sidebar{display:none;}.sidebar.mob{display:flex;position:fixed;inset:0 48% 0 0;z-index:60;width:auto;}
+.sidebar{display:none;}
+.sidebar.mob{display:flex;position:fixed;inset:0 auto 0 0;width:80%;max-width:300px;z-index:80;box-shadow:4px 0 24px rgba(0,0,0,.7);}
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:79;}
+.sidebar-backdrop.open{display:block;}
 .preset-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
 .action-options{padding:8px 12px 4px;}
 }
@@ -188,8 +191,8 @@
 
 <div id="auth" class="screen active" style="align-items:center;justify-content:center;min-height:100vh;">
   <div class="auth-box">
-    <div class="auth-title">⚔ CHRONICLE</div>
-    <div class="auth-sub">Your multiverse RPG</div>
+    <div class="auth-title">⚔ ELYSIAD</div>
+    <div class="auth-sub">The Ultimate RPG</div>
     <div class="auth-tab">
       <button class="auth-tab-btn active" onclick="switchAuthTab('login',this)">Sign In</button>
       <button class="auth-tab-btn" onclick="switchAuthTab('signup',this)">Create Account</button>
@@ -213,7 +216,7 @@
 
 <div id="home" class="screen">
   <div class="topbar">
-    <span class="logo">⚔ CHRONICLE RPG</span>
+    <span class="logo">⚔ ELYSIAD</span>
     <div style="display:flex;gap:8px;align-items:center;">
       <span style="font-size:12px;color:var(--text3);" id="user-label"></span>
       <button class="btn btn-sm" onclick="openSettings()">⚙ Settings</button>
@@ -303,6 +306,7 @@
 <!-- GAME -->
 
 <div id="game" class="screen" style="flex-direction:row;height:100vh;overflow:hidden;">
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar()"></div>
   <div class="sidebar" id="sidebar">
     <div class="sb-hd" id="sb-world">—</div>
     <div class="sb-char">
@@ -361,7 +365,7 @@
   <div class="game-main">
     <div class="topbar">
       <button class="btn btn-ico btn-sm" id="mob-tog" onclick="toggleSidebar()" style="display:none;">☰</button>
-      <span class="logo" id="g-title">Chronicle</span>
+      <span class="logo" id="g-title">Elysiad</span>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-sm" onclick="openMod('log')">📖 Log</button>
         <button class="btn btn-sm" onclick="openSettings()">⚙</button>
@@ -489,11 +493,11 @@ let curVSB={tier:'—',attack_potency:'—',speed:'—',durability:'—',intelli
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  SETTINGS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const cfg=()=>({api:ls('chron_api'),url:ls('chron_url'),key:ls('chron_key')});
+const cfg=()=>({api:ls('elysi_api'),url:ls('elysi_url'),key:ls('elysi_key')});
 const ls=k=>localStorage.getItem(k)||'';
 function openSettings(){const c=cfg();$('s-api').value=c.api;$('s-url').value=c.url;$('s-key').value=c.key;$('set-ov').classList.add('open');}
 function closeSettings(){$('set-ov').classList.remove('open');}
-function saveSettings(){localStorage.setItem('chron_api',$('s-api').value.trim());localStorage.setItem('chron_url',$('s-url').value.trim());localStorage.setItem('chron_key',$('s-key').value.trim());closeSettings();toast('Saved','ok');}
+function saveSettings(){localStorage.setItem('elysi_api',$('s-api').value.trim());localStorage.setItem('elysi_url',$('s-url').value.trim());localStorage.setItem('elysi_key',$('s-key').value.trim());closeSettings();toast('Saved','ok');}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  AUTH
@@ -531,7 +535,7 @@ async function doLogin(){
   try{
     const d=await sbAuth('token?grant_type=password',{email,password:pass});
     currentUser={id:d.user.id,email:d.user.email,name:d.user.user_metadata?.name||email.split('@')[0],token:d.access_token};
-    localStorage.setItem('chron_session',JSON.stringify(currentUser));
+    localStorage.setItem('elysi_session',JSON.stringify(currentUser));
     enterApp();
   }catch(e){authErr(e.message);}
   finally{btn.disabled=false;btn.innerHTML='Sign In →';}
@@ -547,14 +551,14 @@ async function doSignup(){
     const d=await sbAuth('signup',{email,password:pass,data:{name}});
     if(d.user&&!d.access_token){authErr('Check your email to confirm your account, then sign in.');btn.disabled=false;btn.innerHTML='Create Account →';return;}
     currentUser={id:d.user.id,email:d.user.email,name,token:d.access_token};
-    localStorage.setItem('chron_session',JSON.stringify(currentUser));
+    localStorage.setItem('elysi_session',JSON.stringify(currentUser));
     enterApp();
   }catch(e){authErr(e.message);}
   finally{btn.disabled=false;btn.innerHTML='Create Account →';}
 }
 
 function doLogout(){
-  currentUser=null;localStorage.removeItem('chron_session');
+  currentUser=null;localStorage.removeItem('elysi_session');
   nav('auth');
 }
 
@@ -1214,7 +1218,11 @@ async function delOrder(id){if(!confirm('Delete?'))return;try{await sbD('standin
 //  MOBILE + INIT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function checkMob(){const t=$('mob-tog');if(t)t.style.display=window.innerWidth<=640?'flex':'none';}
-function toggleSidebar(){$('sidebar').classList.toggle('mob');}
+function toggleSidebar(){
+  const sb=$('sidebar'),bd=$('sidebar-backdrop');
+  const open=sb.classList.toggle('mob');
+  bd.classList.toggle('open',open);
+}
 window.addEventListener('resize',checkMob);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1223,15 +1231,15 @@ window.addEventListener('resize',checkMob);
 const _ak='__ANTHROPIC_KEY__';
 const _su='__SUPABASE_URL__';
 const _sk='__SUPABASE_KEY__';
-if(_ak&&!_ak.startsWith('__'))localStorage.setItem('chron_api',_ak);
-if(_su&&!_su.startsWith('__'))localStorage.setItem('chron_url',_su);
-if(_sk&&!_sk.startsWith('__'))localStorage.setItem('chron_key',_sk);
+if(_ak&&!_ak.startsWith('__'))localStorage.setItem('elysi_api',_ak);
+if(_su&&!_su.startsWith('__'))localStorage.setItem('elysi_url',_su);
+if(_sk&&!_sk.startsWith('__'))localStorage.setItem('elysi_key',_sk);
 
 // Restore saved session or show auth screen
-const _saved=localStorage.getItem('chron_session');
+const _saved=localStorage.getItem('elysi_session');
 if(_saved){
   try{currentUser=JSON.parse(_saved);enterApp();}
-  catch(e){localStorage.removeItem('chron_session');}
+  catch(e){localStorage.removeItem('elysi_session');}
 }
 checkMob();
 </script>
