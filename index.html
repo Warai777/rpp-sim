@@ -773,27 +773,16 @@ async function parseStats(text){
 function openShop(){$('shop-results').innerHTML='<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px;">Search for any item, ability, or technique from any fiction.<br>Items are priced based on your current power level and world currency.</div>';$('shop-ov').classList.add('open');}
 function closeShop(){$('shop-ov').classList.remove('open');}
 
-// Store shop items in memory to avoid HTML attribute escaping issues
 let shopItems=[];
 
-function safeParseShop(raw){
-  // Strip markdown fences
-  let s=raw.replace(/```json|```/g,'').trim();
-  // If it starts with [ try to parse as-is first
-  try{return JSON.parse(s);}catch(_){}
-  // Try to recover truncated JSON — find last complete object
-  try{
-    // find last }] or just last }
-    const lastClose=s.lastIndexOf('}');
-    if(lastClose>0){
-      let attempt=s.slice(0,lastClose+1);
-      // make sure it's wrapped in array
-      if(!attempt.trimStart().startsWith('[')) attempt='['+attempt;
-      if(!attempt.trimEnd().endsWith(']')) attempt+=']';
-      return JSON.parse(attempt);
-    }
-  }catch(_){}
-  throw new Error('Could not parse shop response — try a more specific search term.');
+function parseShopText(raw, curName){
+  // Parse pipe-delimited lines: NAME|SOURCE|DESCRIPTION|PRICE|REQUIREMENT|CANON(yes/no)
+  const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l.includes('|'));
+  return lines.slice(0,4).map(line=>{
+    const [name,canon_source,description,priceStr,power_requirement,canonStr]=line.split('|').map(s=>s.trim());
+    const price=parseInt((priceStr||'0').replace(/[^0-9]/g,''))||0;
+    return {name:name||'Unknown',canon_source:canon_source||'Unknown',description:description||'',price,currency:curName,power_requirement:power_requirement||'None',canon_accurate:(canonStr||'yes').toLowerCase().startsWith('y'),notes:''};
+  }).filter(i=>i.name&&i.name!=='Unknown');
 }
 
 async function searchShop(){
@@ -805,27 +794,32 @@ async function searchShop(){
     const gs=curGS,ps=curPS;
     const curM=ps?.notes?.match(/CUR:([^|]+)/);const curName=curM?curM[1].trim():'Gold';
     const [world]=await sbG('worlds',`id=eq.${curWorldId}&select=world_name,genre`);
-    const raw=await callAI(`You are the proprietor of the Universal Shop. Return ONLY a raw JSON array of 1-3 items. Keep ALL string values SHORT (under 80 chars each) to avoid truncation.
+    const raw=await callAI(
+`You are the Universal Shop proprietor. List 1-3 items matching the search.
+Output ONLY plain lines, one item per line, pipe-separated, NO JSON, NO markdown:
+NAME|SOURCE|SHORT_DESCRIPTION|PRICE_NUMBER|POWER_REQUIREMENT|yes_or_no_canon
 
-Format: [{"name":"Item Name","description":"One sentence, max 80 chars.","canon_source":"Series name","canon_accurate":true,"price":NUMBER,"currency":"${curName}","power_requirement":"Brief req","notes":""}]
+Rules:
+- SHORT_DESCRIPTION: one sentence, under 100 chars, no pipe characters
+- PRICE_NUMBER: integer only, no symbols. Scale: weak=100-5000, mid=5000-100000, strong=100000-1000000, godlike=1000000+
+- Pricing based on player level (${ps?.current_level||'unknown'}) and tier (${curVSB.tier||'unknown'})
+- yes_or_no_canon: "yes" if item exists in source canon, "no" if invented
+- Currency is ${curName}
+- No extra text, no headers, just the pipe-separated lines`,
+      [{role:'user',content:`Search: ${q}\nWorld: ${world?.world_name||'unknown'}\nBalance: ${gs?.berry||0} ${curName}`}],600);
 
-Pricing in ${curName}: weak 100-1000, mid 1000-50000, strong 50000-500000, godlike 1M+.
-Verify canon accuracy. Current player level: ${ps?.current_level||'unknown'}, tier: ${curVSB.tier||'unknown'}.
-CRITICAL: Keep every string field under 80 characters. No markdown. Valid JSON only.`,
-      [{role:'user',content:`Search: ${q}\nWorld: ${world?.world_name||'unknown'}\nBalance: ${gs?.berry||0} ${curName}`}],1200);
-    const items=safeParseShop(raw);
-    if(!items?.length){$('shop-results').innerHTML='<div style="color:var(--text3);text-align:center;padding:20px;">No items found.</div>';return;}
+    const items=parseShopText(raw, curName);
+    if(!items?.length){$('shop-results').innerHTML='<div style="color:var(--text3);text-align:center;padding:20px;">No items found. Try a different search.</div>';return;}
     shopItems=items;
     $('shop-results').innerHTML=items.map((item,i)=>`
       <div class="shop-item">
         <div class="shop-item-name">${esc(item.name)} ${!item.canon_accurate?'<span style="font-size:10px;color:var(--amber);background:rgba(212,148,74,.15);padding:1px 6px;border-radius:3px;">Non-canon</span>':''}</div>
-        <div style="font-size:11px;color:var(--accent);margin-bottom:6px;">From: ${esc(item.canon_source||'Unknown')}</div>
+        <div style="font-size:11px;color:var(--accent);margin-bottom:6px;">From: ${esc(item.canon_source)}</div>
         <div class="shop-item-desc">${esc(item.description)}</div>
-        ${item.notes?`<div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-style:italic;">${esc(item.notes)}</div>`:''}
         <div class="shop-item-footer">
           <div>
-            <div class="shop-price">${Number(item.price).toLocaleString()} ${esc(item.currency||curName)}</div>
-            <div class="shop-req">Req: ${esc(item.power_requirement||'None')}</div>
+            <div class="shop-price">${Number(item.price).toLocaleString()} ${esc(item.currency)}</div>
+            <div class="shop-req">Req: ${esc(item.power_requirement)}</div>
           </div>
           <button class="btn btn-p btn-sm" onclick="buyItem(${i})">Buy</button>
         </div>
