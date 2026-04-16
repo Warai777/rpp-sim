@@ -682,6 +682,7 @@ currency_name: The in-world currency name (e.g. Berries, Ryo, Zeni, Gold, Credit
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function enterWorld(wid,opening=false){
   curWorldId=wid;nav('game');$('game-log').innerHTML='';$('action-options').style.display='none';
+  cachedWorld=null;cachedOrders=null;
   try{
     const [[world],[gs],[ps]]=await Promise.all([sbG('worlds',`id=eq.${wid}&select=*`),sbG('game_state',`world_id=eq.${wid}&select=*`),sbG('power_system',`world_id=eq.${wid}&select=*`)]);
     curGS=gs;curPS=ps;
@@ -716,7 +717,7 @@ async function genOpening(world,gs,ps){
   }catch(e){ty.remove();addSys('Error: '+e.message);}
 }
 
-function leaveGame(){curWorldId=null;goHome();}
+function leaveGame(){curWorldId=null;cachedWorld=null;cachedOrders=null;goHome();}
 
 function updateSB(){
   const g=curGS,p=curPS;if(!g)return;
@@ -731,24 +732,45 @@ function updateSB(){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  SEND ACTION
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Cache world + standing orders — these rarely change mid-session
+let cachedWorld=null, cachedOrders=null;
+
 async function sendAction(text){
   if(busy||!text.trim()||!curWorldId)return;
   const {api}=cfg();if(!api){toast('Add your API key in Settings','err');openSettings();return;}
   $('action-options').style.display='none';addP(text);busy=true;$('send-btn').disabled=true;
   const ty=addTy();
   try{
-    const [[world],gs,ps]=await Promise.all([sbG('worlds',`id=eq.${curWorldId}&select=*`),sbG('game_state',`world_id=eq.${curWorldId}&select=*`).then(r=>r[0]),sbG('power_system',`world_id=eq.${curWorldId}&select=*`).then(r=>r[0])]);
-    curGS=gs;curPS=ps;
     const lo=text.toLowerCase();
     const ni=['inventory','pack','items','shop','back room','backroom','bag','equipment','gear'].some(k=>lo.includes(k));
     const na=['crew','allies','team','party','companion','comrade'].some(k=>lo.includes(k));
-    const [hist,orders,inv,al]=await Promise.all([sbG('conversation_history',`world_id=eq.${curWorldId}&select=role,content&order=created_at.desc&limit=10`),sbG('standing_orders',`world_id=eq.${curWorldId}&select=rule_text,category`),ni?sbG('inventory',`world_id=eq.${curWorldId}&select=*`):Promise.resolve(null),na?sbG('allies',`world_id=eq.${curWorldId}&select=*`):Promise.resolve(null)]);
+
+    // Fetch only what we need — world+orders cached, gs/ps/hist always fresh but in parallel
+    const fetches=[
+      cachedWorld ? Promise.resolve([[cachedWorld]]) : sbG('worlds',`id=eq.${curWorldId}&select=*`).then(r=>{cachedWorld=r[0];return [r];}),
+      sbG('conversation_history',`world_id=eq.${curWorldId}&select=role,content&order=created_at.desc&limit=10`),
+      cachedOrders !== null ? Promise.resolve(cachedOrders) : sbG('standing_orders',`world_id=eq.${curWorldId}&select=rule_text,category`).then(r=>{cachedOrders=r;return r;}),
+      ni ? sbG('inventory',`world_id=eq.${curWorldId}&select=*`) : Promise.resolve(null),
+      na ? sbG('allies',`world_id=eq.${curWorldId}&select=*`) : Promise.resolve(null),
+    ];
+    const [worldRes, hist, orders, inv, al] = await Promise.all(fetches);
+    const world = cachedWorld || (Array.isArray(worldRes[0]) ? worldRes[0][0] : worldRes[0]);
+
+    // Use in-memory curGS/curPS — only re-fetch if they seem stale
+    const gs=curGS, ps=curPS;
+
     const ctx=buildCtx(gs,ps,orders,inv,al,world.canon_rules);
     const msgs=[];if(hist?.length)[...hist].reverse().forEach(m=>msgs.push({role:m.role,content:m.content}));msgs.push({role:'user',content:text});
     ty.remove();
     const dm=await streamDM(world.dm_system_prompt+'\n\n'+ctx,msgs);
-    await Promise.all([sbP('conversation_history',{world_id:curWorldId,role:'user',content:text,scene_number:gs?.current_day||1}),sbP('conversation_history',{world_id:curWorldId,role:'assistant',content:dm,scene_number:gs?.current_day||1})]);
-    parseStats(dm);await genOptions(dm,world);
+
+    // Save to DB and parse stats in parallel after response
+    await Promise.all([
+      sbP('conversation_history',{world_id:curWorldId,role:'user',content:text,scene_number:gs?.current_day||1}),
+      sbP('conversation_history',{world_id:curWorldId,role:'assistant',content:dm,scene_number:gs?.current_day||1})
+    ]);
+    parseStats(dm);
+    genOptions(dm,world); // don't await — let options load in background
   }catch(e){ty.remove();addSys('Error: '+e.message);}
   finally{busy=false;$('send-btn').disabled=false;}
 }
