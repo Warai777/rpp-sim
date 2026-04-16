@@ -512,6 +512,12 @@ function typewrite(el, text, speed=18){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  HOME
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  if(!ls('chron_api')){
+  localStorage.setItem('chron_api','__ANTHROPIC_KEY__');
+  localStorage.setItem('chron_url','__SUPABASE_URL__');
+  localStorage.setItem('chron_key','__SUPABASE_KEY__');
+}
 async function loadWorlds(){
   const c=$('home-content'),{url,key}=cfg();
   if(!url||!key){c.innerHTML=`<div class="empty"><div style="font-size:30px;opacity:.3;margin-bottom:12px;">⚙</div><p style="font-size:15px;margin-bottom:8px;">Setup Required</p><p style="font-size:13px;margin-bottom:18px;">Configure your API keys to begin</p><button class="btn btn-p" onclick="openSettings()">Open Settings</button></div>`;return;}
