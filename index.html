@@ -521,7 +521,7 @@ async function doLogin(){
   authErr('');
   try{
     const d=await sbAuth('token?grant_type=password',{email,password:pass});
-    currentUser={id:d.user.id,email:d.user.email,name:d.user.user_metadata?.name||email.split('@')[0],token:d.access_token};
+    currentUser={id:d.user.id,email:d.user.email,name:d.user.user_metadata?.name||email.split('@')[0],token:d.access_token,refresh:d.refresh_token};
     localStorage.setItem('elysi_session',JSON.stringify(currentUser));
     enterApp();
   }catch(e){authErr(e.message);}
@@ -537,7 +537,7 @@ async function doSignup(){
   try{
     const d=await sbAuth('signup',{email,password:pass,data:{name}});
     if(d.user&&!d.access_token){authErr('Check your email to confirm your account, then sign in.');btn.disabled=false;btn.innerHTML='Create Account →';return;}
-    currentUser={id:d.user.id,email:d.user.email,name,token:d.access_token};
+    currentUser={id:d.user.id,email:d.user.email,name,token:d.access_token,refresh:d.refresh_token};
     localStorage.setItem('elysi_session',JSON.stringify(currentUser));
     enterApp();
   }catch(e){authErr(e.message);}
@@ -554,14 +554,44 @@ function enterApp(){
   nav('home');loadWorlds();
 }
 
-// Override sb() to include auth token when available
+// Auto-refresh token when expired
+async function refreshToken(){
+  if(!currentUser?.refresh){doLogout();throw new Error('Session expired — please sign in again.');}
+  const {url,key}=cfg();
+  try{
+    const r=await fetch(url.replace(/\/$/,'')+'/auth/v1/token?grant_type=refresh_token',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':key},
+      body:JSON.stringify({refresh_token:currentUser.refresh})
+    });
+    const d=await r.json();
+    if(!r.ok){doLogout();throw new Error('Session expired — please sign in again.');}
+    currentUser.token=d.access_token;
+    currentUser.refresh=d.refresh_token;
+    localStorage.setItem('elysi_session',JSON.stringify(currentUser));
+  }catch(e){doLogout();throw new Error('Session expired — please sign in again.');}
+}
+
+// Supabase requests with auto token refresh
 function sb(path,method='GET',body=null){
   const {url,key}=cfg();
   if(!url||!key)throw new Error('Supabase not configured — open Settings.');
-  const token=currentUser?.token||key;
-  const opts={method,headers:{'Content-Type':'application/json','apikey':key,'Authorization':'Bearer '+token,'Prefer':method==='POST'?'return=representation':''}};
-  if(body)opts.body=JSON.stringify(body);
-  return fetch(url.replace(/\/$/,'')+'/rest/v1/'+path,opts).then(async r=>{const t=await r.text();if(!r.ok)throw new Error(t||'HTTP '+r.status);return t?JSON.parse(t):null;});
+  const doReq=(token)=>{
+    const opts={method,headers:{'Content-Type':'application/json','apikey':key,'Authorization':'Bearer '+token,'Prefer':method==='POST'?'return=representation':''}};
+    if(body)opts.body=JSON.stringify(body);
+    return fetch(url.replace(/\/$/,'')+'/rest/v1/'+path,opts).then(async r=>{
+      const t=await r.text();
+      if(!r.ok){
+        // If JWT expired, refresh and retry once
+        if(t.includes('JWT expired')||t.includes('PGRST303')){
+          return refreshToken().then(()=>doReq(currentUser.token));
+        }
+        throw new Error(t||'HTTP '+r.status);
+      }
+      return t?JSON.parse(t):null;
+    });
+  };
+  return doReq(currentUser?.token||key);
 }
 const sbG=(t,q='')=>sb(t+'?'+q);
 const sbP=(t,d)=>sb(t,'POST',d);
@@ -1029,6 +1059,18 @@ async function parseStats(text){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  UNIVERSAL SHOP
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// Generate VS Battles wiki search URL for an item/ability
+function vsbLink(name, source){
+  // Try direct page first — VS Battles uses underscores and title case
+  const pageName=encodeURIComponent(name.trim().replace(/\s+/g,'_'));
+  return `https://vsbattles.fandom.com/wiki/${pageName}`;
+}
+
+function vsbBtn(name, source){
+  const url=vsbLink(name,source);
+  return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--cyan);text-decoration:none;border:1px solid rgba(74,184,212,.3);border-radius:4px;padding:2px 7px;margin-top:4px;" title="View on VS Battles Wiki">⚔ VS Wiki</a>`;
+}
 async function openShop(){
   $('shop-ov').classList.add('open');
   const recsEl=$('shop-results');
@@ -1058,7 +1100,7 @@ Rules:
     }
     const recItems=parseShopText(raw,curName);
     shopItems=recItems;
-    recsEl.innerHTML=`<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">Recommended for you</div>${recItems.map((item,i)=>`<div class="shop-item" style="border-color:var(--accentD);"><div class="shop-item-name">${esc(item.name)} <span style="font-size:10px;color:var(--accent);background:var(--accentG);padding:1px 6px;border-radius:3px;">Recommended</span>${!item.canon_accurate?' <span style="font-size:10px;color:var(--amber);background:rgba(212,148,74,.15);padding:1px 6px;border-radius:3px;">Fan-made</span>':''}</div><div style="font-size:11px;color:var(--accent);margin-bottom:6px;">From: ${esc(item.canon_source)}</div><div class="shop-item-desc">${esc(item.description)}</div><div class="shop-item-footer"><div><div class="shop-price">${Number(item.price).toLocaleString()} ${esc(item.currency)}</div><div class="shop-req">Req: ${esc(item.power_requirement)}</div></div><button class="btn btn-p btn-sm" onclick="buyItem(${i})">Buy</button></div></div>`).join('')}<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin:16px 0 6px;">Search anything else</div>`;
+    recsEl.innerHTML=`<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">Recommended for you</div>${recItems.map((item,i)=>`<div class="shop-item" style="border-color:var(--accentD);"><div class="shop-item-name">${esc(item.name)} <span style="font-size:10px;color:var(--accent);background:var(--accentG);padding:1px 6px;border-radius:3px;">Recommended</span>${!item.canon_accurate?' <span style="font-size:10px;color:var(--amber);background:rgba(212,148,74,.15);padding:1px 6px;border-radius:3px;">Fan-made</span>':''}</div><div style="font-size:11px;color:var(--accent);margin-bottom:4px;">From: ${esc(item.canon_source)}</div><div class="shop-item-desc">${esc(item.description)}</div><div style="margin-bottom:6px;">${vsbBtn(item.name,item.canon_source)}</div><div class="shop-item-footer"><div><div class="shop-price">${Number(item.price).toLocaleString()} ${esc(item.currency)}</div><div class="shop-req">Req: ${esc(item.power_requirement)}</div></div><button class="btn btn-p btn-sm" onclick="buyItem(${i})">Buy</button></div></div>`).join('')}<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin:16px 0 6px;">Search anything else</div>`;
   }catch(e){
     recsEl.innerHTML='<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px;">Search for any item, ability, or technique from any fiction.</div>';
   }
@@ -1137,8 +1179,9 @@ IMPORTANT: A godlike item like Sequence 0 The Fool costs TRILLIONS, not thousand
     $('shop-results').innerHTML=items.map((item,i)=>`
       <div class="shop-item">
         <div class="shop-item-name">${esc(item.name)} ${!item.canon_accurate?'<span style="font-size:10px;color:var(--amber);background:rgba(212,148,74,.15);padding:1px 6px;border-radius:3px;">Fan-made</span>':item.canon_source&&item.canon_source!==world?.world_name?'<span style="font-size:10px;color:var(--cyan);background:rgba(74,184,212,.1);padding:1px 6px;border-radius:3px;">Cross-world</span>':''}</div>
-        <div style="font-size:11px;color:var(--accent);margin-bottom:6px;">From: ${esc(item.canon_source)}</div>
+        <div style="font-size:11px;color:var(--accent);margin-bottom:4px;">From: ${esc(item.canon_source)}</div>
         <div class="shop-item-desc">${esc(item.description)}</div>
+        <div style="margin-bottom:6px;">${vsbBtn(item.name,item.canon_source)}</div>
         <div class="shop-item-footer">
           <div>
             <div class="shop-price">${Number(item.price).toLocaleString()} ${esc(item.currency)}</div>
@@ -1229,7 +1272,7 @@ Use actual VS Battles tier notation. Be accurate to the character's current powe
         <div class="vsb-row"><span class="vsb-label">Stamina</span><span class="vsb-val">${esc(profile.stamina||'—')}</span></div>
         <div class="vsb-row"><span class="vsb-label">Range</span><span class="vsb-val">${esc(profile.range||'—')}</span></div>
         <div class="vsb-row"><span class="vsb-label">Intelligence</span><span class="vsb-val">${esc(profile.intelligence||'—')}</span></div>
-        <div class="vsb-row"><span class="vsb-label">Powers & Abilities</span><span class="vsb-val" style="color:var(--accent)">${Array.isArray(profile.powers_and_abilities)?profile.powers_and_abilities.map(esc).join(', '):esc(profile.powers_and_abilities||'None')}</span></div>
+        <div class="vsb-row"><span class="vsb-label">Powers & Abilities</span><span class="vsb-val" style="color:var(--accent)">${Array.isArray(profile.powers_and_abilities)?profile.powers_and_abilities.map(p=>`<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 0;">${esc(p)} <a href="https://vsbattles.fandom.com/wiki/${encodeURIComponent(p.trim().replace(/\s+/g,'_'))}" target="_blank" rel="noopener" style="font-size:10px;color:var(--cyan);text-decoration:none;border:1px solid rgba(74,184,212,.3);border-radius:3px;padding:1px 5px;">⚔ wiki</a></span>`).join('<br>'):esc(profile.powers_and_abilities||'None')}</span></div>
         <div class="vsb-row"><span class="vsb-label">Weaknesses</span><span class="vsb-val" style="color:var(--red)">${Array.isArray(profile.weaknesses)?profile.weaknesses.map(esc).join(', '):esc(profile.weaknesses||'None known')}</span></div>`;
     }catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
 
