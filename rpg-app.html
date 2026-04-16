@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chronicle RPG</title>
+<style>
+  :root {
+    --bg-primary: #0d0d0f;
+    --bg-secondary: #141418;
+    --bg-tertiary: #1a1a21;
+    --bg-card: #1e1e27;
+    --bg-hover: #252530;
+    --border: #2a2a38;
+    --border-bright: #3a3a50;
+    --text-primary: #e8e8f0;
+    --text-secondary: #9090a8;
+    --text-muted: #555568;
+    --accent: #7c6af7;
+    --accent-dim: #4a3fa0;
+    --accent-glow: rgba(124,106,247,0.15);
+    --green: #4caf82;
+    --red: #e05555;
+    --amber: #d4944a;
+    --cyan: #4ab8d4;
+    --font: 'Segoe UI', system-ui, sans-serif;
+    --mono: 'Cascadia Code', 'Fira Code', monospace;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg-primary); color: var(--text-primary); font-family: var(--font); min-height: 100vh; overflow-x: hidden; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+  /* ── SCREENS ── */
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  /* ── NAV ── */
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--bg-secondary); position: sticky; top: 0; z-index: 50; }
+  .topbar-title { font-size: 16px; font-weight: 600; color: var(--accent); letter-spacing: 0.05em; }
+  .topbar-actions { display: flex; gap: 8px; }
+
+  /* ── BUTTONS ── */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--radius); border: 1px solid var(--border-bright); background: transparent; color: var(--text-primary); font-size: 13px; font-family: var(--font); cursor: pointer; transition: all 0.15s; }
+  .btn:hover { background: var(--bg-hover); border-color: var(--accent-dim); }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #6a59e0; border-color: #6a59e0; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-icon { width: 34px; height: 34px; padding: 0; justify-content: center; }
+  .btn-danger { border-color: var(--red); color: var(--red); }
+  .btn-danger:hover { background: rgba(224,85,85,0.1); }
+
+  /* ── HOME SCREEN ── */
+  #home { padding: 24px 20px; flex-direction: column; }
+  .home-header { text-align: center; padding: 32px 0 24px; }
+  .home-header h1 { font-size: 32px; font-weight: 700; color: var(--accent); letter-spacing: 0.08em; margin-bottom: 6px; }
+  .home-header p { color: var(--text-secondary); font-size: 14px; }
+  .worlds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .world-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px; cursor: pointer; transition: all 0.15s; position: relative; }
+  .world-card:hover { border-color: var(--accent-dim); background: var(--bg-hover); transform: translateY(-1px); }
+  .world-card-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .world-card-genre { font-size: 12px; color: var(--accent); background: var(--accent-glow); padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px; }
+  .world-card-meta { font-size: 12px; color: var(--text-muted); }
+  .world-card-del { position: absolute; top: 12px; right: 12px; opacity: 0; transition: opacity 0.15s; }
+  .world-card:hover .world-card-del { opacity: 1; }
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
+
+  /* ── FORMS ── */
+  .form-container { max-width: 640px; margin: 0 auto; padding: 24px 20px; width: 100%; }
+  .form-title { font-size: 20px; font-weight: 600; margin-bottom: 24px; }
+  .form-group { margin-bottom: 18px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .form-group input, .form-group textarea, .form-group select { width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; color: var(--text-primary); font-family: var(--font); font-size: 14px; transition: border-color 0.15s; }
+  .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: var(--accent); }
+  .form-group textarea { resize: vertical; min-height: 100px; }
+  .form-group select option { background: var(--bg-secondary); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .form-section-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin: 24px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); letter-spacing: 0.04em; text-transform: uppercase; }
+  .form-actions { display: flex; gap: 10px; margin-top: 28px; }
+
+  /* ── GAME SCREEN ── */
+  #game { flex-direction: row; height: 100vh; overflow: hidden; }
+  .game-sidebar { width: 240px; background: var(--bg-secondary); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0; }
+  .sidebar-world-name { padding: 14px 16px 10px; font-size: 13px; font-weight: 600; color: var(--accent); border-bottom: 1px solid var(--border); }
+  .stat-block { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .stat-block-title { font-size: 10px; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+  .stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .stat-label { font-size: 12px; color: var(--text-secondary); }
+  .stat-value { font-size: 13px; font-weight: 600; color: var(--text-primary); font-family: var(--mono); }
+  .stat-value.hp { color: var(--green); }
+  .stat-value.berry { color: var(--amber); }
+  .stat-value.power { color: var(--accent); }
+  .sidebar-location { padding: 10px 16px; border-bottom: 1px solid var(--border); }
+  .location-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; }
+  .location-value { font-size: 13px; color: var(--cyan); }
+  .day-time { display: flex; gap: 10px; }
+  .sidebar-actions { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .sidebar-back { padding: 12px 16px; margin-top: auto; border-top: 1px solid var(--border); }
+
+  /* ── GAME MAIN ── */
+  .game-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .game-log { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .log-entry { max-width: 100%; }
+  .log-entry.player .log-bubble { background: var(--accent-glow); border: 1px solid var(--accent-dim); border-radius: var(--radius-lg) var(--radius-lg) 4px var(--radius-lg); padding: 12px 16px; margin-left: auto; max-width: 80%; color: var(--text-primary); font-size: 14px; }
+  .log-entry.dm .log-bubble { background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px var(--radius-lg) var(--radius-lg) var(--radius-lg); padding: 14px 18px; color: var(--text-primary); font-size: 14px; line-height: 1.7; white-space: pre-wrap; }
+  .log-entry.system .log-bubble { background: transparent; border: 1px dashed var(--border); border-radius: var(--radius); padding: 10px 14px; color: var(--text-muted); font-size: 12px; text-align: center; font-style: italic; }
+  .log-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .log-entry.player .log-label { text-align: right; }
+  .typing-indicator { display: flex; gap: 4px; align-items: center; padding: 14px 18px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px var(--radius-lg) var(--radius-lg) var(--radius-lg); width: fit-content; }
+  .typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); animation: typingBounce 1.2s infinite; }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typingBounce { 0%,60%,100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-5px); opacity: 1; } }
+
+  .game-input-area { padding: 14px 20px; border-top: 1px solid var(--border); background: var(--bg-secondary); display: flex; gap: 10px; align-items: flex-end; }
+  .game-input-area textarea { flex: 1; background: var(--bg-primary); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; color: var(--text-primary); font-family: var(--font); font-size: 14px; resize: none; max-height: 120px; min-height: 44px; transition: border-color 0.15s; line-height: 1.5; }
+  .game-input-area textarea:focus { outline: none; border-color: var(--accent); }
+
+  /* ── MODAL ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--bg-card); border: 1px solid var(--border-bright); border-radius: var(--radius-lg); width: 100%; max-width: 560px; max-height: 80vh; display: flex; flex-direction: column; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .modal-title { font-size: 15px; font-weight: 600; }
+  .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+  .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* ── INVENTORY / ALLIES ── */
+  .item-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .item-row:last-child { border-bottom: none; }
+  .item-name { font-size: 14px; font-weight: 500; flex: 1; }
+  .item-qty { font-size: 12px; color: var(--accent); font-family: var(--mono); background: var(--accent-glow); padding: 2px 8px; border-radius: 4px; }
+  .item-status { font-size: 11px; color: var(--text-muted); }
+  .item-notes { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .ally-card { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .ally-card:last-child { border-bottom: none; }
+  .ally-name { font-size: 14px; font-weight: 600; }
+  .ally-rel { font-size: 11px; color: var(--accent); margin-bottom: 4px; }
+  .ally-status { font-size: 12px; color: var(--text-secondary); }
+
+  /* ── SETTINGS ── */
+  .settings-section { margin-bottom: 28px; }
+  .settings-section h3 { font-size: 13px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .settings-field { margin-bottom: 14px; }
+  .settings-field label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; }
+  .settings-field input, .settings-field textarea { width: 100%; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 12px; color: var(--text-primary); font-family: var(--font); font-size: 13px; }
+  .settings-field input:focus, .settings-field textarea:focus { outline: none; border-color: var(--accent); }
+  .settings-field input[type="password"] { font-family: var(--mono); letter-spacing: 0.1em; }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--bg-card); border: 1px solid var(--border-bright); border-radius: var(--radius); padding: 10px 16px; font-size: 13px; z-index: 200; transform: translateY(80px); opacity: 0; transition: all 0.25s; max-width: 300px; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: var(--green); color: var(--green); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    .game-sidebar { display: none; }
+    .game-sidebar.mobile-open { display: flex; position: fixed; inset: 0 60% 0 0; z-index: 60; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ HOME SCREEN ══════════════ -->
+<div id="home" class="screen active">
+  <div class="topbar">
+    <span class="topbar-title">⚔ CHRONICLE RPG</span>
+    <div class="topbar-actions">
+      <button class="btn btn-sm" onclick="openSettings()">⚙ Settings</button>
+      <button class="btn btn-primary btn-sm" onclick="showScreen('create-world')">+ New World</button>
+    </div>
+  </div>
+  <div style="padding: 24px 20px; flex: 1;">
+    <div id="worlds-container">
+      <div class="empty-state">
+        <div class="icon">🌐</div>
+        <p style="font-size: 15px; margin-bottom: 8px;">No worlds yet</p>
+        <p style="font-size: 13px; margin-bottom: 20px;">Create your first world to begin your adventure</p>
+        <button class="btn btn-primary" onclick="showScreen('create-world')">+ Create World</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ CREATE WORLD SCREEN ══════════════ -->
+<div id="create-world" class="screen">
+  <div class="topbar">
+    <span class="topbar-title">Create New World</span>
+    <button class="btn btn-sm" onclick="showScreen('home')">← Back</button>
+  </div>
+  <div style="flex: 1; overflow-y: auto;">
+    <div class="form-container">
+      <div class="form-group">
+        <label>World Name</label>
+        <input type="text" id="cw-name" placeholder="e.g. Shattered Realms, The Forgotten Continent…">
+      </div>
+      <div class="form-group">
+        <label>Genre</label>
+        <select id="cw-genre">
+          <option>Cultivation / Xianxia</option>
+          <option>High Fantasy</option>
+          <option>Dark Fantasy</option>
+          <option>Sci-Fi</option>
+          <option>Post-Apocalyptic</option>
+          <option>Historical</option>
+          <option>Urban Fantasy</option>
+          <option>Horror</option>
+          <option>Custom</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>DM System Prompt</label>
+        <textarea id="cw-prompt" rows="6" placeholder="You are the DM of [world name]. The player is [character]. Describe vivid scenes, track stats, and respond to actions in second-person. When stats change use [HP: X] [BERRY: X] [DAY: X] [LOCATION: name] tags in your response…"></textarea>
+        <div class="form-hint">This is the core instruction sent to the AI every turn. Include world lore, tone, and rules here.</div>
+      </div>
+      <div class="form-group">
+        <label>Canon Rules / World Laws</label>
+        <textarea id="cw-canon" rows="3" placeholder="Rules that are always true in this world…"></textarea>
+      </div>
+
+      <div class="form-section-title">Starting Stats</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>HP</label>
+          <input type="number" id="cw-hp" value="100">
+        </div>
+        <div class="form-group">
+          <label>Berry / Currency</label>
+          <input type="number" id="cw-berry" value="500">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Starting Location</label>
+          <input type="text" id="cw-location" placeholder="e.g. Village of Ash">
+        </div>
+        <div class="form-group">
+          <label>Time of Day</label>
+          <select id="cw-time">
+            <option>Dawn</option>
+            <option selected>Morning</option>
+            <option>Afternoon</option>
+            <option>Evening</option>
+            <option>Night</option>
+            <option>Midnight</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-section-title">Power System</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>System Name</label>
+          <input type="text" id="cw-power-name" placeholder="e.g. Qi Cultivation, Magic Tiers…">
+        </div>
+        <div class="form-group">
+          <label>Starting Level</label>
+          <input type="text" id="cw-power-level" placeholder="e.g. Mortal Realm, Novice…">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Special Abilities</label>
+        <input type="text" id="cw-abilities" placeholder="e.g. None, Basic Sword Qi…">
+      </div>
+      <div class="form-group">
+        <label>Meridians / Progress</label>
+        <input type="text" id="cw-meridians" placeholder="e.g. 0/36 opened">
+      </div>
+
+      <div class="form-actions">
+        <button class="btn" onclick="showScreen('home')">Cancel</button>
+        <button class="btn btn-primary" onclick="createWorld()">Create World & Begin</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ GAME SCREEN ══════════════ -->
+<div id="game" class="screen">
+  <div class="game-sidebar" id="game-sidebar">
+    <div class="sidebar-world-name" id="sidebar-world-name">World Name</div>
+
+    <div class="stat-block">
+      <div class="stat-block-title">Vitals</div>
+      <div class="stat-row">
+        <span class="stat-label">HP</span>
+        <span class="stat-value hp" id="stat-hp">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Berry</span>
+        <span class="stat-value berry" id="stat-berry">—</span>
+      </div>
+    </div>
+
+    <div class="stat-block">
+      <div class="stat-block-title">Power</div>
+      <div class="stat-row">
+        <span class="stat-label">Stage</span>
+        <span class="stat-value power" id="stat-stage">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Level</span>
+        <span class="stat-value" id="stat-level">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Meridians</span>
+        <span class="stat-value" id="stat-meridians">—</span>
+      </div>
+    </div>
+
+    <div class="sidebar-location">
+      <div class="location-label">Location</div>
+      <div class="location-value" id="stat-location">—</div>
+      <div class="day-time" style="margin-top: 6px;">
+        <div>
+          <div class="location-label">Day</div>
+          <div style="font-size: 12px; font-family: var(--mono);" id="stat-day">1</div>
+        </div>
+        <div>
+          <div class="location-label">Time</div>
+          <div style="font-size: 12px; color: var(--text-secondary);" id="stat-time">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-actions">
+      <button class="btn btn-sm" onclick="openModal('inv')">🎒 Inventory</button>
+      <button class="btn btn-sm" onclick="openModal('allies')">👥 Allies</button>
+      <button class="btn btn-sm" onclick="openModal('orders')">📋 Standing Orders</button>
+    </div>
+
+    <div class="sidebar-back">
+      <button class="btn btn-sm" style="width: 100%;" onclick="leaveGame()">← Worlds</button>
+    </div>
+  </div>
+
+  <div class="game-main">
+    <div class="topbar" style="display: flex; align-items: center; gap: 10px;">
+      <button class="btn btn-icon btn-sm" id="sidebar-toggle" onclick="toggleMobileSidebar()" style="display:none;">☰</button>
+      <span class="topbar-title" id="game-topbar-title">Chronicle RPG</span>
+      <div style="margin-left: auto; display: flex; gap: 8px;">
+        <button class="btn btn-sm" onclick="openModal('session-log')">📖 Log</button>
+        <button class="btn btn-sm" onclick="openSettings()">⚙</button>
+      </div>
+    </div>
+    <div class="game-log" id="game-log"></div>
+    <div class="game-input-area">
+      <textarea id="action-input" placeholder="What do you do?" rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAction();}"
+        oninput="autoResize(this)"></textarea>
+      <button class="btn btn-primary" onclick="sendAction()" id="send-btn">Send ↵</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MODALS ══════════════ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Modal</span>
+      <button class="btn btn-icon btn-sm" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settings-overlay" onclick="closeSettings(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Settings</span>
+      <button class="btn btn-icon btn-sm" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="settings-section">
+        <h3>API Configuration</h3>
+        <div class="settings-field">
+          <label>Anthropic API Key</label>
+          <input type="password" id="s-api-key" placeholder="sk-ant-…">
+        </div>
+      </div>
+      <div class="settings-section">
+        <h3>Supabase</h3>
+        <div class="settings-field">
+          <label>Project URL</label>
+          <input type="text" id="s-supa-url" placeholder="https://xxxx.supabase.co">
+        </div>
+        <div class="settings-field">
+          <label>Anon Public Key</label>
+          <input type="text" id="s-supa-key" placeholder="eyJhbGciOiJIUzI1NiIs…">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="display:flex;">
+      <button class="btn" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+let currentWorldId = null;
+let currentGameState = null;
+let currentPowerSystem = null;
+let isLoading = false;
+
+const KEYWORDS_INV = ['inventory','pack','items','shop','back room','backroom','bag','sack','pouch','equipment'];
+const KEYWORDS_ALLIES = ['crew','allies','team','party','companion','comrade','friend'];
+
+// ═══════════════════════════════════════════
+//  SETTINGS (localStorage)
+// ═══════════════════════════════════════════
+function getSettings() {
+  return {
+    apiKey: localStorage.getItem('chronicle_api_key') || '',
+    supaUrl: localStorage.getItem('chronicle_supa_url') || '',
+    supaKey: localStorage.getItem('chronicle_supa_key') || '',
+  };
+}
+function openSettings() {
+  const s = getSettings();
+  document.getElementById('s-api-key').value = s.apiKey;
+  document.getElementById('s-supa-url').value = s.supaUrl;
+  document.getElementById('s-supa-key').value = s.supaKey;
+  document.getElementById('settings-overlay').classList.add('open');
+}
+function closeSettings(e) {
+  if (!e || e.target === document.getElementById('settings-overlay'))
+    document.getElementById('settings-overlay').classList.remove('open');
+}
+function saveSettings() {
+  localStorage.setItem('chronicle_api_key', document.getElementById('s-api-key').value.trim());
+  localStorage.setItem('chronicle_supa_url', document.getElementById('s-supa-url').value.trim());
+  localStorage.setItem('chronicle_supa_key', document.getElementById('s-supa-key').value.trim());
+  document.getElementById('settings-overlay').classList.remove('open');
+  toast('Settings saved', 'success');
+}
+
+// ═══════════════════════════════════════════
+//  SUPABASE WRAPPER
+// ═══════════════════════════════════════════
+function sb(path, method='GET', body=null) {
+  const { supaUrl, supaKey } = getSettings();
+  if (!supaUrl || !supaKey) throw new Error('Supabase not configured. Open Settings.');
+  const url = supaUrl.replace(/\/$/, '') + '/rest/v1/' + path;
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': supaKey,
+      'Authorization': 'Bearer ' + supaKey,
+      'Prefer': method === 'POST' ? 'return=representation' : ''
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(url, opts).then(async r => {
+    const text = await r.text();
+    if (!r.ok) throw new Error(text || `HTTP ${r.status}`);
+    return text ? JSON.parse(text) : null;
+  });
+}
+function sbGet(table, query='') { return sb(table + '?' + query); }
+function sbPost(table, data) { return sb(table, 'POST', data); }
+function sbPatch(table, query, data) { return sb(table + '?' + query, 'PATCH', data); }
+function sbDelete(table, query) { return sb(table + '?' + query, 'DELETE'); }
+
+// ═══════════════════════════════════════════
+//  SCREEN NAV
+// ═══════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id.replace('create-world','create-world')).classList.add('active');
+  if (id === 'home') loadWorlds();
+}
+
+// ═══════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ═══════════════════════════════════════════
+//  HOME — LOAD WORLDS
+// ═══════════════════════════════════════════
+async function loadWorlds() {
+  const container = document.getElementById('worlds-container');
+  container.innerHTML = '<div class="empty-state"><div class="icon">⏳</div><p>Loading worlds…</p></div>';
+  try {
+    const worlds = await sbGet('worlds', 'select=*&order=created_at.desc');
+    if (!worlds || worlds.length === 0) {
+      container.innerHTML = `<div class="empty-state"><div class="icon">🌐</div>
+        <p style="font-size:15px;margin-bottom:8px;">No worlds yet</p>
+        <p style="font-size:13px;margin-bottom:20px;">Create your first world to begin your adventure</p>
+        <button class="btn btn-primary" onclick="showScreen('create-world')">+ Create World</button></div>`;
+      return;
+    }
+    container.innerHTML = '<div class="worlds-grid" id="worlds-grid"></div>';
+    const grid = document.getElementById('worlds-grid');
+    worlds.forEach(w => {
+      const d = document.createElement('div');
+      d.className = 'world-card';
+      d.innerHTML = `
+        <button class="btn btn-sm btn-danger world-card-del" onclick="deleteWorld(event,'${w.id}')">✕</button>
+        <div class="world-card-name">${esc(w.world_name)}</div>
+        <div class="world-card-genre">${esc(w.genre || 'Unknown')}</div>
+        <div class="world-card-meta">Created ${new Date(w.created_at).toLocaleDateString()}</div>`;
+      d.addEventListener('click', () => enterWorld(w.id));
+      grid.appendChild(d);
+    });
+  } catch(e) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">⚠</div>
+      <p style="color:var(--red)">${esc(e.message)}</p>
+      <p style="font-size:12px;margin-top:8px;">Check your Supabase settings</p>
+      <button class="btn btn-sm" style="margin-top:12px;" onclick="openSettings()">Open Settings</button></div>`;
+  }
+}
+
+async function deleteWorld(e, id) {
+  e.stopPropagation();
+  if (!confirm('Delete this world permanently? This cannot be undone.')) return;
+  try {
+    await sbDelete('conversation_history', `world_id=eq.${id}`);
+    await sbDelete('inventory', `world_id=eq.${id}`);
+    await sbDelete('standing_orders', `world_id=eq.${id}`);
+    await sbDelete('session_log', `world_id=eq.${id}`);
+    await sbDelete('power_system', `world_id=eq.${id}`);
+    await sbDelete('allies', `world_id=eq.${id}`);
+    await sbDelete('game_state', `world_id=eq.${id}`);
+    await sbDelete('worlds', `id=eq.${id}`);
+    toast('World deleted', 'success');
+    loadWorlds();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════
+//  CREATE WORLD
+// ═══════════════════════════════════════════
+async function createWorld() {
+  const name = document.getElementById('cw-name').value.trim();
+  const genre = document.getElementById('cw-genre').value;
+  const prompt = document.getElementById('cw-prompt').value.trim();
+  const canon = document.getElementById('cw-canon').value.trim();
+  const hp = parseInt(document.getElementById('cw-hp').value) || 100;
+  const berry = parseInt(document.getElementById('cw-berry').value) || 500;
+  const location = document.getElementById('cw-location').value.trim() || 'Unknown';
+  const time = document.getElementById('cw-time').value;
+  const powerName = document.getElementById('cw-power-name').value.trim() || 'Power System';
+  const powerLevel = document.getElementById('cw-power-level').value.trim() || 'Novice';
+  const abilities = document.getElementById('cw-abilities').value.trim() || 'None';
+  const meridians = document.getElementById('cw-meridians').value.trim() || '0';
+
+  if (!name) { toast('World name required', 'error'); return; }
+  if (!prompt) { toast('DM system prompt required', 'error'); return; }
+
+  try {
+    const [world] = await sbPost('worlds', { world_name: name, genre, dm_system_prompt: prompt, canon_rules: canon });
+    const wid = world.id;
+    await sbPost('game_state', { world_id: wid, hp, berry, meridians, first_realm_percent: 0, qi_stage: powerLevel, current_day: 1, current_location: location, current_time_of_day: time });
+    await sbPost('power_system', { world_id: wid, system_name: powerName, current_level: powerLevel, current_progress: 0, special_abilities: abilities, notes: '' });
+    toast('World created!', 'success');
+    setTimeout(() => enterWorld(wid), 400);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════
+//  ENTER WORLD / GAME SCREEN
+// ═══════════════════════════════════════════
+async function enterWorld(worldId) {
+  currentWorldId = worldId;
+  showScreen('game');
+  document.getElementById('game-log').innerHTML = '';
+  addSystemMessage('Loading world…');
+  try {
+    const [world] = await sbGet('worlds', `id=eq.${worldId}&select=*`);
+    const [gs] = await sbGet('game_state', `world_id=eq.${worldId}&select=*`);
+    const [ps] = await sbGet('power_system', `world_id=eq.${worldId}&select=*`);
+    currentGameState = gs;
+    currentPowerSystem = ps;
+    document.getElementById('sidebar-world-name').textContent = world.world_name;
+    document.getElementById('game-topbar-title').textContent = world.world_name;
+    updateStatSidebar();
+
+    const history = await sbGet('conversation_history', `world_id=eq.${worldId}&select=*&order=created_at.asc&limit=50`);
+    document.getElementById('game-log').innerHTML = '';
+    if (history && history.length > 0) {
+      history.forEach(m => {
+        if (m.role === 'user') addPlayerMessage(m.content, false);
+        else addDMMessage(m.content, false);
+      });
+      scrollLog();
+    } else {
+      addSystemMessage('The adventure begins… Type your first action below.');
+    }
+    checkMobileLayout();
+  } catch(e) {
+    addSystemMessage('Error loading world: ' + e.message);
+  }
+}
+
+function leaveGame() {
+  currentWorldId = null;
+  showScreen('home');
+}
+
+function updateStatSidebar() {
+  const gs = currentGameState;
+  const ps = currentPowerSystem;
+  if (!gs) return;
+  document.getElementById('stat-hp').textContent = gs.hp ?? '—';
+  document.getElementById('stat-berry').textContent = gs.berry ?? '—';
+  document.getElementById('stat-location').textContent = gs.current_location || '—';
+  document.getElementById('stat-day').textContent = gs.current_day || 1;
+  document.getElementById('stat-time').textContent = gs.current_time_of_day || '—';
+  document.getElementById('stat-meridians').textContent = gs.meridians || '—';
+  if (ps) {
+    document.getElementById('stat-stage').textContent = ps.current_level || '—';
+    document.getElementById('stat-level').textContent = ps.system_name || '—';
+  }
+}
+
+// ═══════════════════════════════════════════
+//  SEND ACTION
+// ═══════════════════════════════════════════
+async function sendAction() {
+  if (isLoading) return;
+  const input = document.getElementById('action-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const { apiKey } = getSettings();
+  if (!apiKey) { toast('Enter your API key in Settings', 'error'); openSettings(); return; }
+  if (!currentWorldId) return;
+
+  input.value = '';
+  autoResize(input);
+  addPlayerMessage(text);
+  isLoading = true;
+  document.getElementById('send-btn').disabled = true;
+
+  const typing = addTypingIndicator();
+  try {
+    const [world] = await sbGet('worlds', `id=eq.${currentWorldId}&select=*`);
+    const gs = currentGameState;
+    const ps = currentPowerSystem;
+    const history = await sbGet('conversation_history', `world_id=eq.${currentWorldId}&select=role,content&order=created_at.desc&limit=10`);
+    const orders = await sbGet('standing_orders', `world_id=eq.${currentWorldId}&select=rule_text,category`);
+
+    const lowerText = text.toLowerCase();
+    const needsInv = KEYWORDS_INV.some(k => lowerText.includes(k));
+    const needsAllies = KEYWORDS_ALLIES.some(k => lowerText.includes(k));
+
+    let inventory = null, allies = null;
+    if (needsInv) inventory = await sbGet('inventory', `world_id=eq.${currentWorldId}&select=*`);
+    if (needsAllies) allies = await sbGet('allies', `world_id=eq.${currentWorldId}&select=*`);
+
+    const contextParts = [];
+    contextParts.push(`=== CURRENT GAME STATE ===`);
+    contextParts.push(`HP: ${gs?.hp}, Berry: ${gs?.berry}, Day: ${gs?.current_day}, Location: ${gs?.current_location}, Time: ${gs?.current_time_of_day}, Meridians: ${gs?.meridians}`);
+    if (ps) contextParts.push(`Power System: ${ps.system_name} | Level: ${ps.current_level} | Abilities: ${ps.special_abilities}`);
+    if (orders && orders.length) contextParts.push(`\n=== STANDING ORDERS ===\n` + orders.map(o => `[${o.category}] ${o.rule_text}`).join('\n'));
+    if (inventory) contextParts.push(`\n=== INVENTORY ===\n` + inventory.map(i => `${i.item_name} x${i.quantity} [${i.status}]${i.notes ? ' - '+i.notes : ''}`).join('\n'));
+    if (allies) contextParts.push(`\n=== ALLIES ===\n` + allies.map(a => `${a.name} (${a.relationship}) - ${a.status}`).join('\n'));
+    if (world.canon_rules) contextParts.push(`\n=== WORLD CANON ===\n${world.canon_rules}`);
+
+    const systemPrompt = world.dm_system_prompt + '\n\n' + contextParts.join('\n');
+    const msgs = [];
+    if (history && history.length) {
+      [...history].reverse().forEach(m => msgs.push({ role: m.role, content: m.content }));
+    }
+    msgs.push({ role: 'user', content: text });
+
+    const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: msgs
+      })
+    });
+    const data = await apiRes.json();
+    if (!apiRes.ok) throw new Error(data.error?.message || JSON.stringify(data));
+
+    const dmText = data.content?.[0]?.text || '[No response]';
+    typing.remove();
+    addDMMessage(dmText);
+
+    await sbPost('conversation_history', { world_id: currentWorldId, role: 'user', content: text, scene_number: gs?.current_day || 1 });
+    await sbPost('conversation_history', { world_id: currentWorldId, role: 'assistant', content: dmText, scene_number: gs?.current_day || 1 });
+
+    parseAndUpdateStats(dmText);
+
+  } catch(e) {
+    typing.remove();
+    addSystemMessage('Error: ' + e.message);
+  } finally {
+    isLoading = false;
+    document.getElementById('send-btn').disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════════
+//  PARSE STAT CHANGES
+// ═══════════════════════════════════════════
+async function parseAndUpdateStats(text) {
+  if (!currentGameState) return;
+  const updates = {};
+  const hp = text.match(/\[HP:\s*(-?\d+)\]/i);
+  const berry = text.match(/\[BERRY:\s*(-?\d+)\]/i);
+  const day = text.match(/\[DAY:\s*(\d+)\]/i);
+  const loc = text.match(/\[LOCATION:\s*([^\]]+)\]/i);
+  const time = text.match(/\[TIME:\s*([^\]]+)\]/i);
+  const meridians = text.match(/\[MERIDIANS?:\s*([^\]]+)\]/i);
+
+  if (hp) updates.hp = parseInt(hp[1]);
+  if (berry) updates.berry = parseInt(berry[1]);
+  if (day) updates.current_day = parseInt(day[1]);
+  if (loc) updates.current_location = loc[1].trim();
+  if (time) updates.current_time_of_day = time[1].trim();
+  if (meridians) updates.meridians = meridians[1].trim();
+
+  if (Object.keys(updates).length > 0) {
+    try {
+      await sbPatch('game_state', `world_id=eq.${currentWorldId}`, updates);
+      Object.assign(currentGameState, updates);
+      updateStatSidebar();
+    } catch(e) { console.error('Stat update failed:', e); }
+  }
+}
+
+// ═══════════════════════════════════════════
+//  LOG HELPERS
+// ═══════════════════════════════════════════
+function addPlayerMessage(text, scroll=true) {
+  const el = document.createElement('div');
+  el.className = 'log-entry player';
+  el.innerHTML = `<div class="log-label">You</div><div class="log-bubble">${esc(text)}</div>`;
+  document.getElementById('game-log').appendChild(el);
+  if (scroll) scrollLog();
+}
+function addDMMessage(text, scroll=true) {
+  const el = document.createElement('div');
+  el.className = 'log-entry dm';
+  el.innerHTML = `<div class="log-label">Narrator</div><div class="log-bubble">${esc(text)}</div>`;
+  document.getElementById('game-log').appendChild(el);
+  if (scroll) scrollLog();
+}
+function addSystemMessage(text) {
+  const el = document.createElement('div');
+  el.className = 'log-entry system';
+  el.innerHTML = `<div class="log-bubble">${esc(text)}</div>`;
+  document.getElementById('game-log').appendChild(el);
+  scrollLog();
+}
+function addTypingIndicator() {
+  const el = document.createElement('div');
+  el.className = 'log-entry dm';
+  el.innerHTML = `<div class="log-label">Narrator</div><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  document.getElementById('game-log').appendChild(el);
+  scrollLog();
+  return el;
+}
+function scrollLog() {
+  const log = document.getElementById('game-log');
+  log.scrollTop = log.scrollHeight;
+}
+
+// ═══════════════════════════════════════════
+//  MODALS
+// ═══════════════════════════════════════════
+async function openModal(type) {
+  const overlay = document.getElementById('modal-overlay');
+  const body = document.getElementById('modal-body');
+  const footer = document.getElementById('modal-footer');
+  const title = document.getElementById('modal-title');
+  footer.style.display = 'none';
+  footer.innerHTML = '';
+  body.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted)">Loading…</div>';
+  overlay.classList.add('open');
+
+  if (type === 'inv') {
+    title.textContent = '🎒 Inventory';
+    try {
+      const items = await sbGet('inventory', `world_id=eq.${currentWorldId}&select=*`);
+      if (!items || !items.length) { body.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px">No items in inventory</div>'; return; }
+      body.innerHTML = items.map(i => `
+        <div class="item-row">
+          <div style="flex:1"><div class="item-name">${esc(i.item_name)}</div><div class="item-notes">${esc(i.notes||'')}</div><div class="item-status">${esc(i.status||'')}</div></div>
+          <span class="item-qty">×${i.quantity||1}</span>
+        </div>`).join('');
+    } catch(e) { body.innerHTML = `<div style="color:var(--red)">${esc(e.message)}</div>`; }
+
+  } else if (type === 'allies') {
+    title.textContent = '👥 Allies & Companions';
+    try {
+      const allies = await sbGet('allies', `world_id=eq.${currentWorldId}&select=*`);
+      if (!allies || !allies.length) { body.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px">No known allies</div>'; return; }
+      body.innerHTML = allies.map(a => `
+        <div class="ally-card">
+          <div class="ally-name">${esc(a.name)}</div>
+          <div class="ally-rel">${esc(a.relationship||'')}</div>
+          <div class="ally-status">${esc(a.status||'')} ${a.abilities ? '— '+esc(a.abilities) : ''}</div>
+          ${a.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-top:4px">${esc(a.notes)}</div>` : ''}
+        </div>`).join('');
+    } catch(e) { body.innerHTML = `<div style="color:var(--red)">${esc(e.message)}</div>`; }
+
+  } else if (type === 'orders') {
+    title.textContent = '📋 Standing Orders';
+    footer.style.display = 'flex';
+    footer.innerHTML = `<button class="btn btn-primary btn-sm" onclick="addOrderPrompt()">+ Add Order</button>`;
+    try {
+      const orders = await sbGet('standing_orders', `world_id=eq.${currentWorldId}&select=*`);
+      if (!orders || !orders.length) { body.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px">No standing orders</div>'; return; }
+      body.innerHTML = orders.map(o => `
+        <div class="item-row">
+          <div style="flex:1"><div class="item-name" style="font-size:13px">${esc(o.rule_text)}</div><div class="item-status">${esc(o.category||'')}</div></div>
+          <button class="btn btn-sm btn-danger" onclick="deleteOrder('${o.id}')">✕</button>
+        </div>`).join('');
+    } catch(e) { body.innerHTML = `<div style="color:var(--red)">${esc(e.message)}</div>`; }
+
+  } else if (type === 'session-log') {
+    title.textContent = '📖 Session Log';
+    try {
+      const logs = await sbGet('session_log', `world_id=eq.${currentWorldId}&select=*&order=created_at.desc&limit=20`);
+      if (!logs || !logs.length) { body.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px">No session entries yet</div>'; return; }
+      body.innerHTML = logs.map(l => `
+        <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">Day ${l.day} — ${esc(l.location||'')}</div>
+          <div style="font-size:13px">${esc(l.what_happened||'')}</div>
+        </div>`).join('');
+    } catch(e) { body.innerHTML = `<div style="color:var(--red)">${esc(e.message)}</div>`; }
+  }
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal-overlay'))
+    document.getElementById('modal-overlay').classList.remove('open');
+}
+
+async function addOrderPrompt() {
+  const rule = prompt('Enter standing order:');
+  if (!rule) return;
+  const cat = prompt('Category (e.g. Combat, Social, Economy):') || 'General';
+  try {
+    await sbPost('standing_orders', { world_id: currentWorldId, rule_text: rule, category: cat });
+    openModal('orders');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deleteOrder(id) {
+  if (!confirm('Delete this standing order?')) return;
+  try {
+    await sbDelete('standing_orders', `id=eq.${id}`);
+    openModal('orders');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function checkMobileLayout() {
+  const toggle = document.getElementById('sidebar-toggle');
+  if (window.innerWidth <= 640) {
+    toggle.style.display = 'flex';
+  } else {
+    toggle.style.display = 'none';
+  }
+}
+
+function toggleMobileSidebar() {
+  document.getElementById('game-sidebar').classList.toggle('mobile-open');
+}
+
+window.addEventListener('resize', checkMobileLayout);
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+(function init() {
+  const { supaUrl, supaKey } = getSettings();
+  if (!supaUrl || !supaKey) {
+    document.getElementById('worlds-container').innerHTML = `
+      <div class="empty-state">
+        <div class="icon">⚙</div>
+        <p style="font-size:15px;margin-bottom:8px;">Setup Required</p>
+        <p style="font-size:13px;margin-bottom:20px;color:var(--text-muted)">Configure your Supabase and API keys to get started</p>
+        <button class="btn btn-primary" onclick="openSettings()">Open Settings</button>
+      </div>`;
+  } else {
+    loadWorlds();
+  }
+  checkMobileLayout();
+})();
+</script>
+</body>
+</html>
