@@ -283,7 +283,7 @@
       <div class="sb-block-title">Power</div>
       <div class="sr"><span class="sl2">System</span><span class="sv" style="color:var(--accent);font-size:12px;" id="s-psys">—</span></div>
       <div class="sr"><span class="sl2">Level</span><span class="sv" style="color:var(--cyan);" id="s-plvl">—</span></div>
-      <div class="sr"><span class="sl2">Progress</span><span class="sv" style="font-size:11px;color:var(--text2);" id="s-prog">—</span></div>
+      <div class="sr"><span class="sl2">Stage</span><span class="sv" style="font-size:11px;color:var(--text2);" id="s-prog">—</span></div>
     </div>
     <div class="sb-block">
       <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Location</div>
@@ -518,7 +518,7 @@ async function loadWorlds(){
       d.addEventListener('click',()=>enterWorld(w.id));
       g.appendChild(d);
       sbG('game_state',`world_id=eq.${w.id}&select=hp,current_location,qi_stage`).then(r=>{
-        const gs=r?.[0]; if(gs) $('wc-'+w.id).textContent=`${gs.qi_stage||'—'} · ${gs.current_location||'—'} · HP ${gs.hp}`;
+        const gs=r?.[0]; if(gs) $('wc-'+w.id).textContent=`${gs.current_location||'—'} · HP ${gs.hp}`;
       }).catch(()=>{});
     });
     c.innerHTML=''; c.appendChild(g);
@@ -704,7 +704,7 @@ async function createAndBegin(){
         system:`Generate a DM system prompt and world config for a text RPG. Return ONLY raw JSON (no markdown backticks):
 {"dm_prompt":"...","canon_rules":"...","starting_location":"...","starting_time":"Morning"}
 
-dm_prompt (~300 words): Rich narrator persona. Second-person narration. Vivid scene-setting. Faithful to world lore. Power systems ONLY discovered through play — never granted at start. Universal abilities accessible via rare shops, ancient ruins, or special events — NEVER at the beginning. Use these exact stat tags whenever values change during play: [HP: X] [BERRY: X] [DAY: N] [LOCATION: name] [TIME: name] [MERIDIANS: text] [POWER_SYSTEM: name] [POWER_LEVEL: level]. Track consequences. Maintain world tone.
+dm_prompt (~300 words): Rich narrator persona. Second-person narration. Vivid scene-setting. Faithful to world lore. Power systems ONLY discovered through play — never granted at start. Universal abilities accessible via rare shops, ancient ruins, or special events — NEVER at the beginning. Use these exact stat tags whenever values change during play: [HP: X] [BERRY: X] [DAY: N] [LOCATION: name] [TIME: name] [STAGE: text] [POWER_SYSTEM: name] [POWER_LEVEL: level]. Track consequences. Maintain world tone.
 canon_rules: Short paragraph of 3-5 core physics/rules for this world.
 starting_location: A single evocative place name fitting this world and character.
 starting_time: One of Dawn/Morning/Afternoon/Evening/Night — pick what fits best dramatically.`,
@@ -719,7 +719,7 @@ starting_time: One of Dawn/Morning/Afternoon/Evening/Night — pick what fits be
 
     const [world]=await sbP('worlds',{world_name:selWorld.name,genre:selWorld.genre,dm_system_prompt:dmPr,canon_rules:gen.canon_rules||''});
     const wid=world.id;
-    await sbP('game_state',{world_id:wid,hp:100,berry:100,meridians:'Unknown',first_realm_percent:0,qi_stage:'Ungifted',current_day:1,current_location:gen.starting_location||selWorld.name,current_time_of_day:gen.starting_time||'Morning'});
+    await sbP('game_state',{world_id:wid,hp:100,berry:100,power_stage:'Unknown',current_day:1,current_location:gen.starting_location||selWorld.name,current_time_of_day:gen.starting_time||'Morning'});
     await sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}`});
 
     toast('World created!','ok');
@@ -784,7 +784,7 @@ function updateSB(){
   const g=curGS, p=curPS; if(!g) return;
   $('s-hp').textContent=g.hp??'—'; $('s-berry').textContent=g.berry??'—';
   $('s-loc').textContent=g.current_location||'—'; $('s-day').textContent=g.current_day||1;
-  $('s-time').textContent=g.current_time_of_day||'—'; $('s-prog').textContent=g.meridians||'—';
+  $('s-time').textContent=g.current_time_of_day||'—'; $('s-prog').textContent=g.power_stage||'—';
   if(p){ $('s-psys').textContent=p.system_name||'—'; $('s-plvl').textContent=p.current_level||'—'; }
 }
 
@@ -837,7 +837,7 @@ async function sendAction(){
 
 function buildCtx(gs,ps,orders,inv,al,canon){
   const p=['=== CURRENT STATE ==='];
-  if(gs) p.push(`HP:${gs.hp} | Currency:${gs.berry} | Day:${gs.current_day} | Location:${gs.current_location} | Time:${gs.current_time_of_day} | Progress:${gs.meridians}`);
+  if(gs) p.push(`HP:${gs.hp} | Currency:${gs.berry} | Day:${gs.current_day} | Location:${gs.current_location} | Time:${gs.current_time_of_day} | Power Stage:${gs.power_stage}`);
   if(ps) p.push(`Power System:${ps.system_name} | Level:${ps.current_level} | Abilities:${ps.special_abilities}`);
   if(ps?.notes) p.push(`Character data:${ps.notes}`);
   if(orders?.length) p.push('\n=== STANDING ORDERS ===\n'+orders.map(o=>`[${o.category}] ${o.rule_text}`).join('\n'));
@@ -855,9 +855,9 @@ async function parseStats(text){
   const m=rx=>{const r=text.match(rx);return r?r[1].trim():null;};
   const u={};
   const hp=m(/\[HP:\s*(-?\d+)\]/i),berry=m(/\[BERRY:\s*(-?\d+)\]/i),day=m(/\[DAY:\s*(\d+)\]/i),
-        loc=m(/\[LOCATION:\s*([^\]]+)\]/i),time=m(/\[TIME:\s*([^\]]+)\]/i),mer=m(/\[MERIDIANS?:\s*([^\]]+)\]/i);
+        loc=m(/\[LOCATION:\s*([^\]]+)\]/i),time=m(/\[TIME:\s*([^\]]+)\]/i),stage=m(/\[STAGE:\s*([^\]]+)\]/i);
   if(hp)u.hp=parseInt(hp); if(berry)u.berry=parseInt(berry); if(day)u.current_day=parseInt(day);
-  if(loc)u.current_location=loc; if(time)u.current_time_of_day=time; if(mer)u.meridians=mer;
+  if(loc)u.current_location=loc; if(time)u.current_time_of_day=time; if(stage)u.power_stage=stage;
   if(Object.keys(u).length){ try{await sbPa('game_state',`world_id=eq.${curWorldId}`,u);Object.assign(curGS,u);updateSB();}catch(e){} }
   const pn=m(/\[POWER_SYSTEM:\s*([^\]]+)\]/i),pl=m(/\[POWER_LEVEL:\s*([^\]]+)\]/i);
   if(pn||pl){
