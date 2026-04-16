@@ -6,31 +6,25 @@
 <title>Chronicle RPG</title>
 <style>
   :root {
-    --bg: #0d0d0f; --bg2: #141418; --bg3: #1a1a22; --card: #1e1e27; --hover: #252530;
-    --border: #2a2a38; --border2: #3a3a50;
-    --text: #e8e8f0; --text2: #9090a8; --text3: #555568;
-    --accent: #7c6af7; --accentD: #4a3fa0; --accentG: rgba(124,106,247,0.13);
-    --green: #4caf82; --red: #e05555; --amber: #d4944a; --cyan: #4ab8d4;
-    --font: 'Segoe UI', system-ui, sans-serif;
-    --mono: 'Cascadia Code', 'Fira Code', monospace;
-    --r: 8px; --rl: 12px;
+    --bg:#0d0d0f;--bg2:#141418;--card:#1e1e27;--hover:#252530;
+    --border:#2a2a38;--border2:#3a3a50;
+    --text:#e8e8f0;--text2:#9090a8;--text3:#555568;
+    --accent:#7c6af7;--accentD:#4a3fa0;--accentG:rgba(124,106,247,0.13);
+    --green:#4caf82;--red:#e05555;--amber:#d4944a;--cyan:#4ab8d4;--pink:#c96fb0;
+    --font:'Segoe UI',system-ui,sans-serif;--mono:'Cascadia Code','Fira Code',monospace;
+    --r:8px;--rl:12px;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;overflow-x:hidden;}
-  ::-webkit-scrollbar{width:5px;} ::-webkit-scrollbar-track{background:var(--bg2);} ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
-  .screen{display:none;min-height:100vh;flex-direction:column;}
-  .screen.active{display:flex;}
+  ::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:var(--bg2);}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+  .screen{display:none;min-height:100vh;flex-direction:column;}.screen.active{display:flex;}
   .topbar{display:flex;align-items:center;justify-content:space-between;padding:11px 20px;border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0;z-index:50;flex-shrink:0;}
   .logo{font-size:15px;font-weight:700;color:var(--accent);letter-spacing:.06em;}
   .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:var(--r);border:1px solid var(--border2);background:transparent;color:var(--text);font-size:13px;font-family:var(--font);cursor:pointer;transition:all .14s;white-space:nowrap;}
-  .btn:hover{background:var(--hover);border-color:var(--accentD);}
-  .btn:active{transform:scale(.97);}
-  .btn-p{background:var(--accent);border-color:var(--accent);color:#fff;}
-  .btn-p:hover{background:#6a59e0;border-color:#6a59e0;}
-  .btn-sm{padding:5px 10px;font-size:12px;}
-  .btn-ico{width:32px;height:32px;padding:0;justify-content:center;}
-  .btn-d{border-color:var(--red);color:var(--red);}
-  .btn-d:hover{background:rgba(224,85,85,.1);}
+  .btn:hover{background:var(--hover);border-color:var(--accentD);}.btn:active{transform:scale(.97);}
+  .btn-p{background:var(--accent);border-color:var(--accent);color:#fff;}.btn-p:hover{background:#6a59e0;border-color:#6a59e0;}
+  .btn-sm{padding:5px 10px;font-size:12px;}.btn-ico{width:32px;height:32px;padding:0;justify-content:center;}
+  .btn-d{border-color:var(--red);color:var(--red);}.btn-d:hover{background:rgba(224,85,85,.1);}
   .btn:disabled{opacity:.42;cursor:not-allowed;transform:none;}
   .spin{display:inline-block;width:13px;height:13px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -46,18 +40,14 @@
   /* PICKER */
   .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;}
   .tab{padding:9px 16px;font-size:13px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .14s;}
-  .tab:hover{color:var(--text2);}
-  .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
-  .tab-panel{display:none;} .tab-panel.active{display:block;}
+  .tab:hover{color:var(--text2);}.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .tab-panel{display:none;}.tab-panel.active{display:block;}
   .cat-label{font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin:0 0 10px;}
-  .cat-section{margin-bottom:24px;}
   .preset-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:9px;}
   .pcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:13px 11px;cursor:pointer;text-align:center;transition:all .14s;}
-  .pcard:hover{border-color:var(--accentD);background:var(--hover);}
-  .pcard.sel{border-color:var(--accent);background:var(--accentG);}
+  .pcard:hover{border-color:var(--accentD);background:var(--hover);}.pcard.sel{border-color:var(--accent);background:var(--accentG);}
   .sr-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:13px 15px;cursor:pointer;transition:all .14s;margin-bottom:8px;}
-  .sr-card:hover{border-color:var(--accentD);}
-  .sr-card.sel{border-color:var(--accent);background:var(--accentG);}
+  .sr-card:hover{border-color:var(--accentD);}.sr-card.sel{border-color:var(--accent);background:var(--accentG);}
   .lore-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:13px;font-size:13px;color:var(--text2);line-height:1.62;margin-top:11px;max-height:145px;overflow-y:auto;}
   .notfound-box{background:var(--bg2);border:1px solid var(--amber);border-radius:var(--rl);padding:18px;margin-top:12px;}
 
@@ -66,8 +56,7 @@
   .sn{width:27px;height:27px;border-radius:50%;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--text3);flex-shrink:0;}
   .step.active .sn{background:var(--accent);border-color:var(--accent);color:#fff;}
   .step.done .sn{background:var(--green);border-color:var(--green);color:#fff;}
-  .sl{font-size:12px;color:var(--text3);margin-left:8px;}
-  .step.active .sl{color:var(--text);font-weight:500;}
+  .sl{font-size:12px;color:var(--text3);margin-left:8px;}.step.active .sl{color:var(--text);font-weight:500;}
   .sline{width:28px;height:1px;background:var(--border);flex-shrink:0;}
 
   /* CHAR FORM */
@@ -78,42 +67,86 @@
   .fg textarea{resize:vertical;min-height:78px;}
   .hint{font-size:11px;color:var(--text3);margin-top:3px;}
 
-  /* GAME */
+  /* GAME LAYOUT */
   #game{flex-direction:row;height:100vh;overflow:hidden;}
-  .sidebar{width:236px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;}
-  .sb-hd{padding:13px 15px 10px;font-size:13px;font-weight:600;color:var(--accent);border-bottom:1px solid var(--border);}
-  .sb-char{padding:9px 15px;border-bottom:1px solid var(--border);}
-  .sb-block{padding:11px 15px;border-bottom:1px solid var(--border);}
-  .sb-block-title{font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;}
-  .sr{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
-  .sl2{font-size:12px;color:var(--text2);}
-  .sv{font-size:13px;font-weight:600;font-family:var(--mono);}
-  .sb-btns{padding:11px 15px;display:flex;flex-direction:column;gap:7px;}
-  .sb-back{padding:11px 15px;margin-top:auto;border-top:1px solid var(--border);}
+  .sidebar{width:250px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;}
+  .sb-hd{padding:12px 14px 9px;font-size:13px;font-weight:600;color:var(--accent);border-bottom:1px solid var(--border);}
+  .sb-char{padding:8px 14px;border-bottom:1px solid var(--border);}
+  .sb-block{padding:10px 14px;border-bottom:1px solid var(--border);}
+  .sb-block-title{font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px;font-weight:600;}
+  .srow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;gap:6px;}
+  .slb{font-size:11px;color:var(--text3);flex-shrink:0;}
+  .svl{font-size:12px;font-weight:600;font-family:var(--mono);text-align:right;color:var(--text);}
+  .svl.tier{color:var(--amber);}
+  .svl.hp{color:var(--green);}
+  .svl.spd{color:var(--cyan);}
+  .svl.atk{color:var(--red);}
+  .svl.dur{color:#7ec8e3;}
+  .svl.int{color:var(--pink);}
+  .svl.cur{color:var(--amber);}
+  .svl.ps{color:var(--accent);}
+  .sb-btns{padding:10px 14px;display:flex;flex-direction:column;gap:7px;}
+  .sb-back{padding:10px 14px;margin-top:auto;border-top:1px solid var(--border);}
 
+  /* GAME MAIN */
   .game-main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
-  .game-log{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:15px;}
+  .game-log{flex:1;overflow-y:auto;padding:18px 20px;display:flex;flex-direction:column;gap:14px;}
   .le-p .lb{background:var(--accentG);border:1px solid var(--accentD);border-radius:var(--rl) var(--rl) 4px var(--rl);padding:11px 15px;margin-left:auto;max-width:80%;font-size:14px;}
-  .le-d .lb{background:var(--card);border:1px solid var(--border);border-radius:4px var(--rl) var(--rl) var(--rl);padding:13px 17px;font-size:14px;line-height:1.75;white-space:pre-wrap;}
+  .le-d .lb{background:var(--card);border:1px solid var(--border);border-radius:4px var(--rl) var(--rl) var(--rl);padding:13px 17px;font-size:14px;line-height:1.78;white-space:pre-wrap;font-family:var(--font);}
   .le-s .lb{background:transparent;border:1px dashed var(--border);border-radius:var(--r);padding:9px 13px;color:var(--text3);font-size:12px;text-align:center;font-style:italic;}
   .ll{font-size:11px;color:var(--text3);margin-bottom:3px;}
   .le-p .ll{text-align:right;}
+
+  /* TYPEWRITER CURSOR */
+  .tw-cursor{display:inline-block;width:2px;height:1em;background:var(--accent);margin-left:1px;vertical-align:text-bottom;animation:blink .75s step-end infinite;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+  /* ACTION OPTIONS */
+  .action-options{display:flex;flex-direction:column;gap:6px;padding:10px 20px 4px;}
+  .opt-btn{display:flex;align-items:flex-start;gap:10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:9px 13px;cursor:pointer;text-align:left;transition:all .14s;width:100%;font-family:var(--font);}
+  .opt-btn:hover{border-color:var(--accentD);background:var(--hover);}
+  .opt-btn.free{border-style:dashed;border-color:var(--border2);}
+  .opt-num{font-size:11px;font-weight:700;color:var(--accent);background:var(--accentG);width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+  .opt-num.free{color:var(--text3);background:transparent;border:1px solid var(--border2);}
+  .opt-text{font-size:13px;color:var(--text2);line-height:1.45;}
+
+  /* TYPING DOTS */
   .ty{display:flex;gap:4px;align-items:center;padding:13px 17px;background:var(--card);border:1px solid var(--border);border-radius:4px var(--rl) var(--rl) var(--rl);width:fit-content;}
   .td{width:7px;height:7px;border-radius:50%;background:var(--text3);animation:bounce 1.2s infinite;}
-  .td:nth-child(2){animation-delay:.2s;} .td:nth-child(3){animation-delay:.4s;}
+  .td:nth-child(2){animation-delay:.2s;}.td:nth-child(3){animation-delay:.4s;}
   @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.4;}30%{transform:translateY(-5px);opacity:1;}}
 
-  .input-area{padding:13px 18px;border-top:1px solid var(--border);background:var(--bg2);display:flex;gap:9px;align-items:flex-end;}
+  /* INPUT AREA */
+  .input-area{padding:12px 18px;border-top:1px solid var(--border);background:var(--bg2);display:flex;gap:9px;align-items:flex-end;}
   .input-area textarea{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px 13px;color:var(--text);font-family:var(--font);font-size:14px;resize:none;max-height:120px;min-height:43px;transition:border-color .14s;line-height:1.5;}
   .input-area textarea:focus{outline:none;border-color:var(--accent);}
 
+  /* SHOP */
+  .shop-search{display:flex;gap:8px;margin-bottom:16px;}
+  .shop-search input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;color:var(--text);font-family:var(--font);font-size:13px;}
+  .shop-search input:focus{outline:none;border-color:var(--accent);}
+  .shop-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:13px;margin-bottom:9px;}
+  .shop-item-name{font-size:14px;font-weight:600;margin-bottom:3px;}
+  .shop-item-desc{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:8px;}
+  .shop-item-footer{display:flex;align-items:center;justify-content:space-between;}
+  .shop-price{font-size:13px;font-weight:700;color:var(--amber);font-family:var(--mono);}
+  .shop-req{font-size:11px;color:var(--text3);}
+
+  /* VS BATTLES STAT CARD (modal) */
+  .vsb-row{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--border);}
+  .vsb-row:last-child{border-bottom:none;}
+  .vsb-label{font-size:12px;color:var(--text3);font-weight:600;letter-spacing:.04em;}
+  .vsb-val{font-size:12px;color:var(--text);text-align:right;max-width:60%;}
+  .vsb-tier{font-size:20px;font-weight:700;color:var(--amber);text-align:center;padding:8px 0 12px;}
+
   /* MODALS */
-  .ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:100;align-items:center;justify-content:center;padding:18px;}
+  .ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:100;align-items:center;justify-content:center;padding:18px;}
   .ov.open{display:flex;}
-  .modal{background:var(--card);border:1px solid var(--border2);border-radius:var(--rl);width:100%;max-width:550px;max-height:80vh;display:flex;flex-direction:column;}
-  .mh{display:flex;align-items:center;justify-content:space-between;padding:15px 19px;border-bottom:1px solid var(--border);}
-  .mb{padding:15px 19px;overflow-y:auto;flex:1;}
-  .mf{padding:11px 19px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+  .modal{background:var(--card);border:1px solid var(--border2);border-radius:var(--rl);width:100%;max-width:550px;max-height:84vh;display:flex;flex-direction:column;}
+  .modal.wide{max-width:680px;}
+  .mh{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
+  .mb{padding:14px 18px;overflow-y:auto;flex:1;}
+  .mf{padding:10px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
   .irow{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid var(--border);}
   .irow:last-child{border-bottom:none;}
 
@@ -124,20 +157,18 @@
   .sf input:focus{outline:none;border-color:var(--accent);}
 
   .toast{position:fixed;bottom:22px;right:22px;background:var(--card);border:1px solid var(--border2);border-radius:var(--r);padding:10px 15px;font-size:13px;z-index:200;transform:translateY(70px);opacity:0;transition:all .22s;max-width:290px;pointer-events:none;}
-  .toast.show{transform:translateY(0);opacity:1;}
-  .toast.ok{border-color:var(--green);color:var(--green);}
-  .toast.err{border-color:var(--red);color:var(--red);}
+  .toast.show{transform:translateY(0);opacity:1;}.toast.ok{border-color:var(--green);color:var(--green);}.toast.err{border-color:var(--red);color:var(--red);}
 
   @media(max-width:640px){
-    .sidebar{display:none;}
-    .sidebar.mob{display:flex;position:fixed;inset:0 48% 0 0;z-index:60;width:auto;}
+    .sidebar{display:none;}.sidebar.mob{display:flex;position:fixed;inset:0 48% 0 0;z-index:60;width:auto;}
     .preset-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
+    .action-options{padding:8px 12px 4px;}
   }
 </style>
 </head>
 <body>
 
-<!-- ══════════ HOME ══════════ -->
+<!-- HOME -->
 <div id="home" class="screen active">
   <div class="topbar">
     <span class="logo">⚔ CHRONICLE RPG</span>
@@ -146,60 +177,35 @@
       <button class="btn btn-p btn-sm" onclick="startFlow()">+ Enter a World</button>
     </div>
   </div>
-  <div style="padding:22px 20px;flex:1;" id="home-content">
-    <div class="empty"><span class="spin"></span></div>
-  </div>
+  <div style="padding:22px 20px;flex:1;" id="home-content"><div class="empty"><span class="spin"></span></div></div>
 </div>
 
-<!-- ══════════ STEP 1: PICK WORLD ══════════ -->
+<!-- STEP 1: PICK WORLD -->
 <div id="pick-world" class="screen">
-  <div class="topbar">
-    <span class="logo">Choose Your World</span>
-    <button class="btn btn-sm" onclick="goHome()">✕ Cancel</button>
-  </div>
+  <div class="topbar"><span class="logo">Choose Your World</span><button class="btn btn-sm" onclick="goHome()">✕ Cancel</button></div>
   <div style="flex:1;overflow-y:auto;">
     <div style="max-width:760px;margin:0 auto;padding:22px 20px;">
       <div class="steps">
         <div class="step active"><div class="sn">1</div><div class="sl">Choose World</div></div>
         <div class="sline"></div>
-        <div class="step" id="st2"><div class="sn">2</div><div class="sl">Your Character</div></div>
+        <div class="step"><div class="sn">2</div><div class="sl">Your Character</div></div>
       </div>
-
-      <!-- SEARCH -->
       <div style="display:flex;gap:9px;margin-bottom:6px;">
-        <input type="text" id="wsearch" style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 13px;color:var(--text);font-family:var(--font);font-size:14px;" placeholder="Search any world — type a name and press Search (e.g. Jujutsu Kaisen, Mistborn, Coiling Dragon…)" onkeydown="if(event.key==='Enter')doSearch()">
+        <input type="text" id="wsearch" style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 13px;color:var(--text);font-family:var(--font);font-size:14px;" placeholder="Search any world — Jujutsu Kaisen, Mistborn, Coiling Dragon, Dune…" onkeydown="if(event.key==='Enter')doSearch()">
         <button class="btn btn-p" id="sbtn" onclick="doSearch()">Search</button>
       </div>
-      <div style="font-size:11px;color:var(--text3);margin-bottom:18px;">Type any fiction and search — anime, novels, manhwa, games, movies, or your own idea.</div>
-
-      <!-- SEARCH RESULTS -->
-      <div id="sr-area" style="display:none;margin-bottom:22px;">
-        <div class="cat-label">Search Results</div>
-        <div id="sr-list"></div>
-      </div>
-
-      <!-- NOT FOUND -->
+      <div style="font-size:11px;color:var(--text3);margin-bottom:18px;">Any fiction — anime, novels, manhwa, games, movies, or your own idea.</div>
+      <div id="sr-area" style="display:none;margin-bottom:22px;"><div class="cat-label">Search Results</div><div id="sr-list"></div></div>
       <div id="notfound-area" style="display:none;margin-bottom:22px;">
         <div class="notfound-box">
           <div style="font-size:14px;font-weight:600;color:var(--amber);margin-bottom:6px;">⚠ World not recognized</div>
-          <div style="font-size:13px;color:var(--text2);margin-bottom:14px;">We couldn't find lore for "<span id="nf-query"></span>". Describe your world below and we'll use that instead.</div>
-          <div class="fg">
-            <label>World Name</label>
-            <input type="text" id="nf-name" placeholder="Name of your world">
-          </div>
-          <div class="fg">
-            <label>World Description</label>
-            <textarea id="nf-desc" rows="4" placeholder="Describe the setting, tone, power systems, factions, and anything the DM should know about this world…"></textarea>
-          </div>
-          <div class="fg">
-            <label>Genre</label>
-            <input type="text" id="nf-genre" placeholder="e.g. Dark Fantasy, Cultivation, Sci-Fi…">
-          </div>
+          <div style="font-size:13px;color:var(--text2);margin-bottom:14px;">Couldn't find "<span id="nf-query"></span>". Describe it below.</div>
+          <div class="fg"><label>World Name</label><input type="text" id="nf-name" placeholder="Name of your world"></div>
+          <div class="fg"><label>World Description</label><textarea id="nf-desc" rows="4" placeholder="Setting, tone, power systems, factions, anything the DM should know…"></textarea></div>
+          <div class="fg"><label>Genre</label><input type="text" id="nf-genre" placeholder="e.g. Dark Fantasy, Cultivation, Sci-Fi…"></div>
           <button class="btn btn-p" onclick="useCustomDesc()">Use This World →</button>
         </div>
       </div>
-
-      <!-- TABS FOR PRESETS -->
       <div class="cat-label" style="margin-bottom:8px;">Or pick from popular worlds</div>
       <div class="tabs">
         <div class="tab active" onclick="switchTab('anime',this)">Anime</div>
@@ -207,18 +213,14 @@
         <div class="tab" onclick="switchTab('fantasy',this)">Western Fantasy</div>
         <div class="tab" onclick="switchTab('games',this)">Games</div>
       </div>
-
       <div id="tab-anime" class="tab-panel active"></div>
       <div id="tab-cultivation" class="tab-panel"></div>
       <div id="tab-fantasy" class="tab-panel"></div>
       <div id="tab-games" class="tab-panel"></div>
-
-      <!-- PREVIEW -->
       <div id="world-preview" style="display:none;margin-top:6px;">
         <div style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:5px;" id="pv-title"></div>
         <div class="lore-box" id="pv-lore"></div>
       </div>
-
       <div style="display:flex;justify-content:flex-end;margin-top:22px;">
         <button class="btn btn-p" id="next-btn" onclick="goToChar()" disabled>Next: Create Character →</button>
       </div>
@@ -226,12 +228,9 @@
   </div>
 </div>
 
-<!-- ══════════ STEP 2: CHARACTER ══════════ -->
+<!-- STEP 2: CHARACTER -->
 <div id="create-char" class="screen">
-  <div class="topbar">
-    <span class="logo" id="char-title">Create Character</span>
-    <button class="btn btn-sm" onclick="nav('pick-world')">← Back</button>
-  </div>
+  <div class="topbar"><span class="logo" id="char-title">Create Character</span><button class="btn btn-sm" onclick="nav('pick-world')">← Back</button></div>
   <div style="flex:1;overflow-y:auto;">
     <div style="max-width:560px;margin:0 auto;padding:22px 20px;">
       <div class="steps">
@@ -239,25 +238,14 @@
         <div class="sline"></div>
         <div class="step active"><div class="sn">2</div><div class="sl">Your Character</div></div>
       </div>
-
-      <div class="fg">
-        <label>Character Name</label>
-        <input type="text" id="cname" placeholder="What are you called in this world?">
-      </div>
+      <div class="fg"><label>Character Name</label><input type="text" id="cname" placeholder="What are you called in this world?"></div>
       <div class="fg">
         <label>Appearance</label>
-        <textarea id="capp" rows="3" placeholder="How do you look? Build, features, hair, clothing, anything that defines your presence…"></textarea>
+        <textarea id="capp" rows="3" placeholder="How do you look? Build, features, hair, clothing, anything distinctive…"></textarea>
         <div class="hint">Used by the DM when NPCs describe you or you catch your reflection.</div>
       </div>
-      <div class="fg">
-        <label>Backstory</label>
-        <textarea id="cback" rows="3" placeholder="Where did you come from? What shaped you before this story began?"></textarea>
-      </div>
-      <div class="fg">
-        <label>Personality</label>
-        <input type="text" id="cpers" placeholder="e.g. Cold, calculating, loyal to very few — hides ambition behind a calm exterior">
-      </div>
-
+      <div class="fg"><label>Backstory</label><textarea id="cback" rows="3" placeholder="Where did you come from? What shaped you before this story began?"></textarea></div>
+      <div class="fg"><label>Personality</label><input type="text" id="cpers" placeholder="e.g. Cold and calculating, loyal to very few, hides ambition behind calm"></div>
       <div style="display:flex;justify-content:flex-end;margin-top:26px;gap:9px;">
         <button class="btn" onclick="nav('pick-world')">← Back</button>
         <button class="btn btn-p" id="begin-btn" onclick="createAndBegin()">Begin Adventure ↵</button>
@@ -266,41 +254,58 @@
   </div>
 </div>
 
-<!-- ══════════ GAME ══════════ -->
+<!-- GAME -->
 <div id="game" class="screen" style="flex-direction:row;height:100vh;overflow:hidden;">
   <div class="sidebar" id="sidebar">
     <div class="sb-hd" id="sb-world">—</div>
     <div class="sb-char">
-      <div style="font-size:14px;font-weight:600;" id="sb-name">—</div>
+      <div style="font-size:13px;font-weight:600;" id="sb-name">—</div>
       <div style="font-size:11px;color:var(--text3);margin-top:2px;" id="sb-arch">—</div>
     </div>
+
+    <!-- VS BATTLES STATS -->
+    <div class="sb-block">
+      <div class="sb-block-title">VS Battles Profile</div>
+      <div class="srow"><span class="slb">Tier</span><span class="svl tier" id="s-tier">—</span></div>
+      <div class="srow"><span class="slb">Attack Potency</span><span class="svl atk" id="s-atk">—</span></div>
+      <div class="srow"><span class="slb">Speed</span><span class="svl spd" id="s-spd">—</span></div>
+      <div class="srow"><span class="slb">Durability</span><span class="svl dur" id="s-dur">—</span></div>
+      <div class="srow"><span class="slb">Intelligence</span><span class="svl int" id="s-int">—</span></div>
+    </div>
+
+    <!-- VITALS -->
     <div class="sb-block">
       <div class="sb-block-title">Vitals</div>
-      <div class="sr"><span class="sl2">HP</span><span class="sv" style="color:var(--green);" id="s-hp">—</span></div>
-      <div class="sr"><span class="sl2">Currency</span><span class="sv" style="color:var(--amber);" id="s-berry">—</span></div>
+      <div class="srow"><span class="slb">HP</span><span class="svl hp" id="s-hp">—</span></div>
+      <div class="srow"><span class="slb">Currency</span><span class="svl cur" id="s-berry">—</span></div>
     </div>
+
+    <!-- POWER -->
     <div class="sb-block">
-      <div class="sb-block-title">Power</div>
-      <div class="sr"><span class="sl2">System</span><span class="sv" style="color:var(--accent);font-size:12px;" id="s-psys">—</span></div>
-      <div class="sr"><span class="sl2">Level</span><span class="sv" style="color:var(--cyan);" id="s-plvl">—</span></div>
-      <div class="sr"><span class="sl2">Stage</span><span class="sv" style="font-size:11px;color:var(--text2);" id="s-prog">—</span></div>
+      <div class="sb-block-title">Power System</div>
+      <div class="srow"><span class="slb">System</span><span class="svl ps" id="s-psys" style="font-size:11px;">—</span></div>
+      <div class="srow"><span class="slb">Level</span><span class="svl" style="color:var(--cyan);" id="s-plvl">—</span></div>
+      <div class="srow"><span class="slb">Stage</span><span class="svl" style="color:var(--text2);font-size:11px;" id="s-prog">—</span></div>
     </div>
+
+    <!-- LOCATION -->
     <div class="sb-block">
-      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Location</div>
-      <div style="font-size:13px;color:var(--cyan);" id="s-loc">—</div>
-      <div style="display:flex;gap:14px;margin-top:6px;">
-        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;">Day</div><div style="font-size:12px;font-family:var(--mono);" id="s-day">1</div></div>
-        <div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;">Time</div><div style="font-size:12px;color:var(--text2);" id="s-time">—</div></div>
+      <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;font-weight:600;">Location</div>
+      <div style="font-size:12px;color:var(--cyan);margin-bottom:5px;" id="s-loc">—</div>
+      <div style="display:flex;gap:14px;">
+        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;">Day</div><div style="font-size:12px;font-family:var(--mono);" id="s-day">1</div></div>
+        <div><div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;">Time</div><div style="font-size:12px;color:var(--text2);" id="s-time">—</div></div>
       </div>
     </div>
+
     <div class="sb-btns">
+      <button class="btn btn-sm" onclick="openMod('vsb')">📊 Full Stats</button>
+      <button class="btn btn-sm" onclick="openShop()">🛒 Universal Shop</button>
       <button class="btn btn-sm" onclick="openMod('inv')">🎒 Inventory</button>
       <button class="btn btn-sm" onclick="openMod('allies')">👥 Allies</button>
       <button class="btn btn-sm" onclick="openMod('orders')">📋 Standing Orders</button>
     </div>
-    <div class="sb-back">
-      <button class="btn btn-sm" style="width:100%;" onclick="leaveGame()">← All Worlds</button>
-    </div>
+    <div class="sb-back"><button class="btn btn-sm" style="width:100%;" onclick="leaveGame()">← All Worlds</button></div>
   </div>
 
   <div class="game-main">
@@ -313,34 +318,49 @@
       </div>
     </div>
     <div class="game-log" id="game-log"></div>
+    <div class="action-options" id="action-options" style="display:none;"></div>
     <div class="input-area">
-      <textarea id="act-inp" placeholder="What do you do?" rows="1"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAction();}"
+      <textarea id="act-inp" placeholder="Free response — type anything…" rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFree();}"
         oninput="grow(this)"></textarea>
-      <button class="btn btn-p" id="send-btn" onclick="sendAction()">Send ↵</button>
+      <button class="btn btn-p" id="send-btn" onclick="sendFree()">Send ↵</button>
     </div>
   </div>
 </div>
 
 <!-- GENERIC MODAL -->
 <div class="ov" id="mod-ov" onclick="if(event.target===this)closeMod()">
-  <div class="modal">
-    <div class="mh">
-      <span style="font-size:15px;font-weight:600;" id="mod-title">—</span>
-      <button class="btn btn-ico btn-sm" onclick="closeMod()">✕</button>
-    </div>
+  <div class="modal" id="mod-inner">
+    <div class="mh"><span style="font-size:15px;font-weight:600;" id="mod-title">—</span><button class="btn btn-ico btn-sm" onclick="closeMod()">✕</button></div>
     <div class="mb" id="mod-body"></div>
     <div class="mf" id="mod-foot" style="display:none;"></div>
   </div>
 </div>
 
-<!-- SETTINGS MODAL -->
+<!-- SHOP MODAL -->
+<div class="ov" id="shop-ov" onclick="if(event.target===this)closeShop()">
+  <div class="modal wide">
+    <div class="mh">
+      <div>
+        <div style="font-size:15px;font-weight:600;">🛒 Universal Shop</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">Items priced in <span id="shop-currency">your world's currency</span> · Canon-accurate stock</div>
+      </div>
+      <button class="btn btn-ico btn-sm" onclick="closeShop()">✕</button>
+    </div>
+    <div class="mb">
+      <div class="shop-search">
+        <input type="text" id="shop-query" placeholder="Search for any item, ability, weapon, technique… (e.g. Sharingan, Devil Fruit, Lightsaber)" onkeydown="if(event.key==='Enter')searchShop()">
+        <button class="btn btn-p btn-sm" id="shop-btn" onclick="searchShop()">Search</button>
+      </div>
+      <div id="shop-results"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
 <div class="ov" id="set-ov" onclick="if(event.target===this)closeSettings()">
   <div class="modal">
-    <div class="mh">
-      <span style="font-size:15px;font-weight:600;">⚙ Settings</span>
-      <button class="btn btn-ico btn-sm" onclick="closeSettings()">✕</button>
-    </div>
+    <div class="mh"><span style="font-size:15px;font-weight:600;">⚙ Settings</span><button class="btn btn-ico btn-sm" onclick="closeSettings()">✕</button></div>
     <div class="mb">
       <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">Anthropic API</div>
       <div class="sf"><label>API Key</label><input type="password" id="s-api" placeholder="sk-ant-…"></div>
@@ -362,115 +382,74 @@
 //  WORLD DATA
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const WORLDS = {
-  anime: [
-    { id:'naruto',    name:'Naruto',               icon:'🍃', tag:'Shinobi · Chakra',
-      lore:'Hidden ninja villages shaped by war and the Will of Fire. Chakra fuels jutsu requiring hand seals, training, and bloodline talent. Shinobi rank Genin → Chunin → Jonin → Kage. Bingo books list dangerous targets. Akatsuki hunts the tailed beasts. The war between the great villages never truly ends.' },
-    { id:'onepiece',  name:'One Piece',             icon:'⚓', tag:'Pirate · Devil Fruit',
-      lore:'A vast ocean of islands and pirate crews chasing the legendary One Piece. Devil Fruits grant extraordinary powers at the cost of swimming. Haki — Observation, Armament, Conqueror\'s — marks elite warriors. The World Government and Marines enforce uneasy order. The Grand Line and New World await the bold.' },
-    { id:'bleach',    name:'Bleach',                icon:'⚔', tag:'Soul Reaper · Zanpakuto',
-      lore:'Layered realms: the living world, Soul Society, Hueco Mundo. Soul Reapers wield Zanpakuto — weapons with inner spirits unlocked as Shikai, then Bankai. Hollows prey on the living. Reiatsu marks power. The 13 Court Guard Squads maintain fragile balance against Hollows, Arrancars, Quincy, and rogue Captains.' },
-    { id:'mha',       name:'My Hero Academia',      icon:'💥', tag:'Quirk · Hero',
-      lore:'80% of humanity carries a Quirk — a unique superpower. Pro Heroes are licensed, ranked, and celebrated. UA High trains the next generation under legendary heroes. The League of Villains and All For One threaten the peace. One For All, a stockpiling power passed person to person, is the ultimate counter-force.' },
-    { id:'aot',       name:'Attack on Titan',       icon:'🏰', tag:'Titan · Dark',
-      lore:'Humanity hides behind three concentric walls from humanoid Titans that devour people without reason. The Survey Corps uses ODM gear — omnidirectional mobility — to fight beyond the walls. Titan weakness: the nape of the neck. Beneath the political factions and military lies a truth that will shatter everything.' },
-    { id:'demonslayer',name:'Demon Slayer',         icon:'🌸', tag:'Taisho · Breathing',
-      lore:'Taisho-era Japan haunted by demons — immortal creatures born from a progenitor. The Demon Slayer Corps fights in the shadows. Breathing Styles channel oxygen into superhuman strength, speed, and sword technique. The Hashira are its nine elite. Sun Breathing, the original style, may be the only true path to the Demon King\'s death.' },
-    { id:'jjk',       name:'Jujutsu Kaisen',        icon:'🔵', tag:'Cursed Energy · Sorcerer',
-      lore:'Cursed energy — negative emotion given form — produces monstrous Cursed Spirits that plague humanity. Jujutsu Sorcerers exorcise them using Cursed Techniques, Domain Expansions, and sheer output. Tokyo and Kyoto Jujutsu High train sorcerers in secret. Special Grade curses and rogue sorcerers threaten a fragile peace.' },
-    { id:'hxh',       name:'Hunter x Hunter',       icon:'🎯', tag:'Nen · Hunter',
-      lore:'Hunters are licensed elite — able to access restricted locations, hunt dangerous prey, and pursue ancient secrets. Nen is the invisible life energy system divided into Enhancement, Emission, Transmutation, Conjuration, Manipulation, and Specialization. Those who survive the learning process gain abilities that defy imagination.' },
-    { id:'fma',       name:'Fullmetal Alchemist',   icon:'⚗', tag:'Alchemy · Brotherhood',
-      lore:'A world where Alchemy — the science of equivalent exchange — shapes military power. The Philosopher\'s Stone bypasses the laws of exchange at a terrible human cost. State Alchemists serve the military. Homunculi pull strings from the shadows. The truth lies beyond the Gate, at a price almost no one survives.' },
-    { id:'sololeveling',name:'Solo Leveling',       icon:'🔪', tag:'Hunter · Shadow',
-      lore:'Gates appeared worldwide, releasing monsters into reality. Humans awakened as Hunters ranked E through S, tasked with clearing dungeons before they explode. The Shadow Monarch ability allows raising fallen enemies as an undead army that grows without limit. The weakest Hunter became something the world had never seen.' },
+  anime:[
+    {id:'naruto',name:'Naruto',icon:'🍃',tag:'Shinobi · Chakra',genre:'Anime / Shinobi',lore:'Hidden ninja villages shaped by war and the Will of Fire. Chakra fuels jutsu requiring hand seals, training, and bloodline talent. Shinobi rank Genin → Chunin → Jonin → Kage. Bingo books list dangerous targets. Akatsuki hunts the tailed beasts.'},
+    {id:'onepiece',name:'One Piece',icon:'⚓',tag:'Pirate · Devil Fruit',genre:'Anime / Pirate',lore:'A vast ocean of islands and pirate crews chasing the legendary One Piece. Devil Fruits grant extraordinary powers at the cost of swimming. Haki — Observation, Armament, Conqueror\'s — marks elite warriors. The Grand Line and New World await.'},
+    {id:'bleach',name:'Bleach',icon:'⚔',tag:'Soul Reaper · Zanpakuto',genre:'Anime / Soul Society',lore:'Layered realms: living world, Soul Society, Hueco Mundo. Soul Reapers wield Zanpakuto with Shikai and Bankai. Hollows prey on the living. Reiatsu marks power. The 13 Court Guard Squads maintain fragile balance.'},
+    {id:'mha',name:'My Hero Academia',icon:'💥',tag:'Quirk · Hero',genre:'Anime / Superhero',lore:'80% of humanity has a Quirk. Pro Heroes are licensed and ranked. UA High trains the next generation. The League of Villains and All For One threaten the peace. One For All is the ultimate counter-force.'},
+    {id:'aot',name:'Attack on Titan',icon:'🏰',tag:'Titan · Dark',genre:'Anime / Dark',lore:'Humanity hides behind three walls from Titans that devour without reason. The Survey Corps uses ODM gear to fight beyond the walls. Beneath the politics lies a truth that will shatter everything.'},
+    {id:'demonslayer',name:'Demon Slayer',icon:'🌸',tag:'Taisho · Breathing',genre:'Anime / Taisho',lore:'Taisho-era Japan haunted by demons. Breathing Styles channel oxygen into superhuman sword technique. The Hashira are nine elite demon slayers. Sun Breathing may be the only true path to the Demon King\'s death.'},
+    {id:'jjk',name:'Jujutsu Kaisen',icon:'🔵',tag:'Cursed Energy · Sorcerer',genre:'Anime / Jujutsu',lore:'Cursed energy — negative emotion given form — produces Cursed Spirits. Jujutsu Sorcerers exorcise them via Cursed Techniques and Domain Expansions. Special Grade curses and rogue sorcerers threaten fragile peace.'},
+    {id:'hxh',name:'Hunter x Hunter',icon:'🎯',tag:'Nen · Hunter',genre:'Anime / Nen',lore:'Hunters are licensed elite able to access restricted locations. Nen is life energy divided into Enhancement, Emission, Transmutation, Conjuration, Manipulation, and Specialization. Those who survive learning gain abilities that defy imagination.'},
+    {id:'fma',name:'Fullmetal Alchemist',icon:'⚗',tag:'Alchemy · Brotherhood',genre:'Anime / Alchemy',lore:'Alchemy — the science of equivalent exchange — shapes military power. The Philosopher\'s Stone bypasses exchange at terrible human cost. Homunculi pull strings from the shadows. The truth lies beyond the Gate.'},
+    {id:'sololeveling',name:'Solo Leveling',icon:'🔪',tag:'Hunter · Shadow',genre:'Manhwa / Hunter',lore:'Gates appeared worldwide, releasing monsters. Humans awakened as Hunters ranked E through S. The Shadow Monarch ability raises fallen enemies as an undead army without limit.'},
   ],
-  cultivation: [
-    { id:'btth',      name:'Battle Through the Heavens', icon:'🔥', tag:'Dou Qi · Xianxia',
-      lore:'Dou Qi cultivation where strength is everything. Nine Dou Zhe stages ascending to Dou Huang, Dou Wang, Dou Zong, Dou Zun, Dou Sheng, and the mythical Dou Di. Mysterious pills, ancient ruins, Heavenly Flames, and soul spaces define the path. The Pill Tower, Ancient Clans, and Black-Corner Region war over dominance.' },
-    { id:'issth',     name:'I Shall Seal the Heavens',   icon:'🌀', tag:'Cultivation · Dao',
-      lore:'A cultivation world where one ascends through Foundation Establishment, Core Formation, Nascent Soul, Spirit Severing, Dao Seeking, and Immortal Ascension. Dao insight is the true power. Heaven and Earth Treasures, magical items, and ancient Demon Sealing Hexes shape the path. The desire to defy Heaven itself drives the greatest cultivators.' },
-    { id:'swallowingstar',name:'Swallowing the Heavens', icon:'💫', tag:'Qi · Martial',
-      lore:'Martial artists cultivate Qi through body tempering, core formation, and spiritual sense refinement. Unique constitutions and heavenly inheritances separate the talented from the destined. Ancient ruins hold forgotten techniques. Clans, sects, and empires clash over resources. Those who swallow the heavens answer to no one.' },
-    { id:'coilingdragon',name:'Coiling Dragon',          icon:'🐉', tag:'Profound Truths · Linley',
-      lore:'A vast world where mages and warriors study the profound mysteries of the universe to reach Deity level and beyond. Profound Truths of Earth, Fire, Wind, and more must be comprehended and fused. The Four Divine Beasts clan. The Gebados Planar Prison. Gods and Highgods battle across planes while mortals strive to simply survive.' },
-    { id:'rmji',      name:'Renegade Immortal',          icon:'☁', tag:'Immortal · Cultivation',
-      lore:'A world where cultivation is everything and talent determines fate — or so the sects believe. Wang Lin has no talent, yet his obsession and cunning carve a path through Foundation, Core, Nascent, and beyond toward true immortality. Celestial realms, demon sects, and ancient inheritances await those bold enough to defy their destiny.' },
-    { id:'worldofcult',name:'World of Cultivation',     icon:'🌾', tag:'Zuo Mo · Farming',
-      lore:'A strange cultivator who just wants to farm and profit stumbles through the cultivation world by accident, cunning, and sheer luck. Ling plants, spirit artifacts, battle formations, and the mysterious Yun Hai Tablet. What begins as greed for jingshi transforms into something far greater than anyone planned.' },
-    { id:'perfectworld',name:'Perfect World',           icon:'✨', tag:'Shi Hao · Stone Village',
-      lore:'An immense cultivation world spanning countless ancient lands. Stone Village hides a genius who will shake the heavens. Body refinement, Heavenly Passages, the Sea of Reincarnation, and divine abilities mark the path of a true supreme being. Ancient forbidden zones and primordial beasts guard the world\'s deepest secrets.' },
-    { id:'lonesword',  name:'Sword in the Star',        icon:'🌟', tag:'Sword Dao · Ascension',
-      lore:'A world of sword cultivators where the Sword Dao encompasses all philosophies of steel and spirit. Sword Intent, Sword Heart, and Sword Soul are the three gates to mastery. Ancient sword spirits reside in legendary blades. Heavenly Sword Pavilions, rogue cultivators, and demon sects clash across the nine heavens.' },
+  cultivation:[
+    {id:'btth',name:'Battle Through the Heavens',icon:'🔥',tag:'Dou Qi · Xianxia',genre:'Cultivation / Xianxia',lore:'Dou Qi cultivation where strength is everything. Nine Dou Zhe stages ascending to Dou Di. Mysterious pills, ancient ruins, Heavenly Flames. The Pill Tower and Black-Corner Region war over dominance.'},
+    {id:'issth',name:'I Shall Seal the Heavens',icon:'🌀',tag:'Cultivation · Dao',genre:'Cultivation / Xianxia',lore:'Ascension through Foundation Establishment, Core Formation, Nascent Soul, Spirit Severing, Dao Seeking, Immortal Ascension. Dao insight is the true power. Ancient Demon Sealing Hexes shape the path.'},
+    {id:'coilingdragon',name:'Coiling Dragon',icon:'🐉',tag:'Profound Truths · Linley',genre:'Cultivation / Xianxia',lore:'Mages and warriors study profound mysteries to reach Deity level. Profound Truths of Earth, Fire, Wind must be comprehended and fused. Gods and Highgods battle across planes.'},
+    {id:'rmji',name:'Renegade Immortal',icon:'☁',tag:'Immortal · Wang Lin',genre:'Cultivation / Xianxia',lore:'Wang Lin has no talent, yet obsession and cunning carve a path toward true immortality. Celestial realms, demon sects, and ancient inheritances await those who defy their destiny.'},
+    {id:'perfectworld',name:'Perfect World',icon:'✨',tag:'Shi Hao · Stone Village',genre:'Cultivation / Xianxia',lore:'Immense world spanning countless ancient lands. Stone Village hides a genius who will shake the heavens. Heavenly Passages, the Sea of Reincarnation, primordial beasts guard the world\'s deepest secrets.'},
+    {id:'againstgods',name:'Against the Gods',icon:'⚡',tag:'Yun Che · Phoenix',genre:'Cultivation / Xianxia',lore:'Yun Che carries the Evil God\'s inheritance and the Heaven Smiting Devil Slayer Sword. Profound Strength from Elementary to Divine Master to Eternal God Realm. Phoenix, Dragon God, and Devil bloodlines shape destiny.'},
+    {id:'swallowing',name:'Swallowing the Heavens',icon:'💫',tag:'Qi · Martial',genre:'Cultivation / Xianxia',lore:'Martial artists cultivate Qi through body tempering and core formation. Unique constitutions and heavenly inheritances separate the talented from the destined. Clans, sects, and empires clash over resources.'},
+    {id:'worldofcult',name:'World of Cultivation',icon:'🌾',tag:'Zuo Mo · Farming',genre:'Cultivation / Xianxia',lore:'A cultivator who just wants to farm and profit stumbles through the cultivation world by accident, cunning, and luck. Ling plants, spirit artifacts, and battle formations define a strange path.'},
   ],
-  fantasy: [
-    { id:'lotr',      name:'Lord of the Rings',       icon:'💍', tag:'Middle-earth · Tolkien',
-      lore:'Middle-earth in the Third Age — Elves fade, Dwarves delve, Men rise, and the shadow of Sauron grows. The One Ring must be destroyed in the fires of Mount Doom. Wizards, Ents, Balrogs, and the undead Nazgul walk this world. The War of the Ring determines the fate of all free peoples.' },
-    { id:'wot',       name:'Wheel of Time',            icon:'🌀', tag:'One Power · Ages',
-      lore:'The Wheel of Time turns, weaving lives and Ages from the thread of the One Power. Men who channel the saidin go mad from the Dark One\'s taint. Women of the Aes Sedai wield saidar and shape kingdoms. Rand al\'Thor is the Dragon Reborn. The Last Battle, Tarmon Gai\'don, approaches across a world of prophecy and peril.' },
-    { id:'mistborn',  name:'Mistborn',                 icon:'🌫', tag:'Allomancy · Ash World',
-      lore:'An ashen world ruled by the immortal Lord Ruler where ash falls from the sky and mists rule the night. Allomancy — swallowing and burning metals for power — divides Mistings (one metal) from the rare Mistborn (all metals). Skaa slaves toil under Final Empire nobles. A small crew of thieves plans the impossible: to topple a god.' },
-    { id:'stormlight', name:'The Stormlight Archive',  icon:'⚡', tag:'Stormlight · Radiant',
-      lore:'Roshar — a world of stone and storm where enormous Highstorms remake the landscape. Stormlight, captured in gemstones, powers Fabrials and the ancient Knights Radiant. Shardblades cut souls. Spren bond with humans to grant Surgebinding — manipulation of fundamental forces. The Desolations return and old oaths must be spoken again.' },
-    { id:'witcher',   name:'The Witcher',              icon:'🐺', tag:'Witcher · Morally Grey',
-      lore:'A morally grey continent of humans, elves, dwarves, and monsters. Witchers — mutated monster hunters — are feared, mistrusted, and essential. The Nilfgaardian Empire expands northward by conquest. The Brotherhood of Sorcerers holds political power through magic. Elder Blood, the Law of Surprise, and prophecy bind destinies.' },
-    { id:'dnd',       name:'Forgotten Realms',         icon:'🐉', tag:'D&D · Sword Coast',
-      lore:'The Sword Coast and beyond — a world of ancient empires, dungeon delving, and divine intervention. Magic flows through the Weave. Classes range from Fighter to Archmage to Warlock. Gods take active interest in mortal affairs. Baldur\'s Gate, Waterdeep, and Neverwinter are the great cities of an endlessly dangerous world.' },
-    { id:'firstlaw',  name:'The First Law',            icon:'🗡', tag:'Grimdark · Politics',
-      lore:'The Union and the North fight an endless war while the Gurkish Empire presses from the south. Magi wield ancient power at terrible cost. The mysterious wizard Bayaz claims to know the truth of the world\'s founding. No one in this world is purely good. The First Law — that wizards must not interfere — has already been broken.' },
-    { id:'sandersoncos',name:'Cosmere',                icon:'🌌', tag:'Shard · Investiture',
-      lore:'A collection of worlds connected through the Cosmere — the greater universe. Investiture, the fundamental magic energy, manifests differently on each world: Stormlight on Roshar, Allomancy on Scadrial, AonDor on Sel. Shards of Adonalsium — fragments of a shattered god — shape entire worlds from behind the scenes.' },
+  fantasy:[
+    {id:'lotr',name:'Lord of the Rings',icon:'💍',tag:'Middle-earth · Tolkien',genre:'High Fantasy',lore:'Middle-earth in the Third Age. Elves fade, Dwarves delve, Men rise, Sauron\'s shadow grows. The One Ring must be destroyed in the fires of Mount Doom. The War of the Ring determines the fate of all free peoples.'},
+    {id:'wot',name:'Wheel of Time',icon:'🌀',tag:'One Power · Ages',genre:'High Fantasy',lore:'The Wheel of Time turns, weaving the One Power through Ages. Men who channel the saidin go mad. Women of the Aes Sedai wield saidar and shape kingdoms. The Dragon Reborn faces Tarmon Gai\'don.'},
+    {id:'mistborn',name:'Mistborn',icon:'🌫',tag:'Allomancy · Ash World',genre:'Fantasy / Allomancy',lore:'An ashen world ruled by the immortal Lord Ruler. Allomancy — swallowing and burning metals for power — divides Mistings from the rare Mistborn. A crew of thieves plans to topple a god.'},
+    {id:'stormlight',name:'The Stormlight Archive',icon:'⚡',tag:'Stormlight · Radiant',genre:'High Fantasy',lore:'Roshar — a world of stone and storm. Stormlight powers Fabrials and ancient Knights Radiant. Shardblades cut souls. Spren bond with humans to grant Surgebinding. The Desolations return.'},
+    {id:'witcher',name:'The Witcher',icon:'🐺',tag:'Witcher · Morally Grey',genre:'Dark Fantasy',lore:'A morally grey continent of humans, elves, dwarves, and monsters. Witchers are mutated monster hunters — feared and essential. The Nilfgaardian Empire expands. Elder Blood and prophecy bind destinies.'},
+    {id:'dnd',name:'Forgotten Realms',icon:'🐉',tag:'D&D · Sword Coast',genre:'High Fantasy',lore:'The Sword Coast — ancient empires, dungeon delving, and divine intervention. Magic flows through the Weave. Gods take active interest in mortal affairs. Baldur\'s Gate and Waterdeep are the great cities.'},
+    {id:'firstlaw',name:'The First Law',icon:'🗡',tag:'Grimdark · Politics',genre:'Grimdark Fantasy',lore:'The Union and the North fight an endless war while the Gurkish Empire presses from the south. Magi wield ancient power at terrible cost. No one in this world is purely good.'},
+    {id:'mistborn2',name:'Cosmere',icon:'🌌',tag:'Shard · Investiture',genre:'Fantasy / Cosmere',lore:'Worlds connected through the Cosmere. Investiture manifests differently on each: Stormlight on Roshar, Allomancy on Scadrial, AonDor on Sel. Shards of Adonalsium shape entire worlds from behind the scenes.'},
   ],
-  games: [
-    { id:'eldenring',  name:'Elden Ring',          icon:'🌑', tag:'Soulsborne · Tarnished',
-      lore:'The Lands Between — the Elden Ring shattered, the Golden Order crumbles. Demigods clutch Great Rune shards and wage endless war. The Tarnished return from beyond death, guided by Grace toward the Erdtree. Ancient sorceries, incantations, and Ashes of War define combat. The answers lie in the ruins of a murdered god.' },
-    { id:'darksouls',  name:'Dark Souls',          icon:'🕯', tag:'Undead · Curse',
-      lore:'A world caught in an endless cycle of fire and dark. The Undead are cursed to hollow — losing humanity until nothing remains. Lords of Cinder sacrificed themselves to link the First Flame. Humanity, Estus, and the Darksign govern survival. Ancient covenants, hidden lore, and the weight of despair define every encounter.' },
-    { id:'finalfantasy',name:'Final Fantasy XIV',  icon:'🌿', tag:'FFXIV · Hydaelyn',
-      lore:'Hydaelyn — a world of conflicting Light and Dark where the Warrior of Light stands between destruction and salvation. Aether flows through all living things, powering magic and Echo. The Garlean Empire wages war with magitek. Primals — eikons summoned by beast tribes — threaten the realm. The Source and its Reflections hold cosmic secrets.' },
-    { id:'witcher3',   name:'The Witcher 3',       icon:'🐺', tag:'Open World · Geralt',
-      lore:'The Northern Kingdoms after the second Nilfgaard war, scarred by invasion. Geralt of Rivia hunts monsters, navigates political webs, and searches for those he loves. The Wild Hunt rides between worlds. Magic is dying in some places and surging in others. Skellige, Velen, Novigrad, and Toussaint each hold their own dangers and power.' },
-    { id:'hollow',     name:'Hollow Knight',       icon:'🦋', tag:'Hallownest · Infection',
-      lore:'The ancient kingdom of Hallownest, deep underground, consumed by a radiant infection that animates the dead and drives the living mad. The Pale King\'s seal weakens. Bugs of all kinds — warriors, scholars, merchants — once thrived here. The Vessels exist to contain the Radiance. The Knight descends with a nail and a purpose not yet known.' },
-    { id:'hades',      name:'Hades',               icon:'🔱', tag:'Roguelike · Underworld',
-      lore:'The Greek Underworld where Zagreus, son of Hades, fights endlessly to escape to the surface. Boons from Olympian gods — Athena\'s deflect, Ares\' curse, Poseidon\'s knock-back — augment weapons with each run. Shades, Furies, and the Warden Cerberus stand in the way. The truth of Zagreus\'s origin lies at the heart of everything.' },
-    { id:'cyberpunk',  name:'Cyberpunk 2077',      icon:'🌃', tag:'Night City · Chrome',
-      lore:'Night City, California 2077 — a megalopolis of neon, chrome, and corporate war. Cyberware replaces flesh for power and profit. Gangs, megacorps, fixers, and Netrunners compete for dominance. The Net\'s ICE and blackwall guard secrets worth dying for. Edgerunners live fast, burn bright, and almost never make it out whole.' },
+  games:[
+    {id:'eldenring',name:'Elden Ring',icon:'🌑',tag:'Soulsborne · Tarnished',genre:'Dark Fantasy',lore:'The Lands Between — the Elden Ring shattered, the Golden Order crumbles. Demigods clutch Great Rune shards. The Tarnished return from beyond death guided by Grace. Ancient sorceries and Ashes of War define combat.'},
+    {id:'darksouls',name:'Dark Souls',icon:'🕯',tag:'Undead · Curse',genre:'Dark Fantasy',lore:'A world caught in an endless cycle of fire and dark. The Undead are cursed to hollow. Lords of Cinder sacrificed themselves to link the First Flame. Humanity, Estus, and the Darksign govern survival.'},
+    {id:'ffxiv',name:'Final Fantasy XIV',icon:'🌿',tag:'FFXIV · Hydaelyn',genre:'Fantasy / FFXIV',lore:'Hydaelyn — a world of conflicting Light and Dark. Aether flows through all living things, powering magic and Echo. The Warrior of Light stands between destruction and salvation.'},
+    {id:'hollow',name:'Hollow Knight',icon:'🦋',tag:'Hallownest · Infection',genre:'Dark Fantasy',lore:'The ancient kingdom of Hallownest, consumed by a radiant infection. The Pale King\'s seal weakens. The Vessels exist to contain the Radiance. The Knight descends with a nail and a purpose not yet known.'},
+    {id:'hades',name:'Hades',icon:'🔱',tag:'Roguelike · Underworld',genre:'Greek Mythology',lore:'The Greek Underworld where Zagreus fights endlessly to escape. Boons from Olympian gods augment weapons with each run. Shades, Furies, and the Warden Cerberus stand in the way.'},
+    {id:'cyberpunk',name:'Cyberpunk 2077',icon:'🌃',tag:'Night City · Chrome',genre:'Science Fiction',lore:'Night City 2077 — neon, chrome, and corporate war. Cyberware replaces flesh for power. Gangs, megacorps, fixers, and Netrunners compete. Edgerunners live fast and almost never make it out whole.'},
+    {id:'witcher3',name:'The Witcher 3',icon:'🐺',tag:'Open World · Geralt',genre:'Dark Fantasy',lore:'The Northern Kingdoms after the second Nilfgaard war. Geralt hunts monsters and searches for those he loves. The Wild Hunt rides between worlds. Skellige, Velen, Novigrad, and Toussaint each hold their own dangers.'},
+    {id:'bg3',name:'Baldur\'s Gate 3',icon:'🧠',tag:'D&D 5e · Mind Flayer',genre:'High Fantasy',lore:'A tadpole implanted by Mind Flayers grants dark power and threatens transformation. The Sword Coast braces for invasion. Companions with their own agendas join the journey. Every choice reshapes who you become.'},
   ]
 };
-
-const TABS = ['anime','cultivation','fantasy','games'];
+const TABS=['anime','cultivation','fantasy','games'];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  STATE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-let selWorld = null;
-let curWorldId = null;
-let curGS = null;
-let curPS = null;
-let busy = false;
+let selWorld=null, curWorldId=null, curGS=null, curPS=null, busy=false;
+let curVSB={tier:'—',attack_potency:'—',speed:'—',durability:'—',intelligence:'—',powers:'—'};
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  SETTINGS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const cfg = () => ({ api: ls('chron_api'), url: ls('chron_url'), key: ls('chron_key') });
-const ls = k => localStorage.getItem(k)||'';
-function openSettings(){ const c=cfg(); $('s-api').value=c.api; $('s-url').value=c.url; $('s-key').value=c.key; $('set-ov').classList.add('open'); }
-function closeSettings(){ $('set-ov').classList.remove('open'); }
-function saveSettings(){
-  localStorage.setItem('chron_api',$('s-api').value.trim());
-  localStorage.setItem('chron_url',$('s-url').value.trim());
-  localStorage.setItem('chron_key',$('s-key').value.trim());
-  closeSettings(); toast('Saved','ok');
-}
+const cfg=()=>({api:ls('chron_api'),url:ls('chron_url'),key:ls('chron_key')});
+const ls=k=>localStorage.getItem(k)||'';
+function openSettings(){const c=cfg();$('s-api').value=c.api;$('s-url').value=c.url;$('s-key').value=c.key;$('set-ov').classList.add('open');}
+function closeSettings(){$('set-ov').classList.remove('open');}
+function saveSettings(){localStorage.setItem('chron_api',$('s-api').value.trim());localStorage.setItem('chron_url',$('s-url').value.trim());localStorage.setItem('chron_key',$('s-key').value.trim());closeSettings();toast('Saved','ok');}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  SUPABASE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function sb(path, method='GET', body=null){
-  const {url,key} = cfg();
-  if(!url||!key) throw new Error('Supabase not configured — open Settings.');
+function sb(path,method='GET',body=null){
+  const {url,key}=cfg();
+  if(!url||!key)throw new Error('Supabase not configured — open Settings.');
   const opts={method,headers:{'Content-Type':'application/json','apikey':key,'Authorization':'Bearer '+key,'Prefer':method==='POST'?'return=representation':''}};
-  if(body) opts.body=JSON.stringify(body);
+  if(body)opts.body=JSON.stringify(body);
   return fetch(url.replace(/\/$/,'')+'/rest/v1/'+path,opts).then(async r=>{const t=await r.text();if(!r.ok)throw new Error(t||'HTTP '+r.status);return t?JSON.parse(t):null;});
 }
 const sbG=(t,q='')=>sb(t+'?'+q);
@@ -479,371 +458,290 @@ const sbPa=(t,q,d)=>sb(t+'?'+q,'PATCH',d);
 const sbD=(t,q)=>sb(t+'?'+q,'DELETE');
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  NAV + UTILS
+//  ANTHROPIC API
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const $ = id => document.getElementById(id);
-function nav(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); }
-function goHome(){ nav('home'); loadWorlds(); }
-function toast(msg,type=''){
-  const t=$('toast'); t.textContent=msg; t.className='toast show '+type;
-  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),3200);
+async function callAI(system, messages, maxTokens=1000){
+  const {api}=cfg();
+  if(!api)throw new Error('No API key — open Settings.');
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':api,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:maxTokens,system,messages})
+  });
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error?.message||'API error');
+  return d.content?.[0]?.text||'';
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  UTILS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const $=id=>document.getElementById(id);
+function nav(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');}
+function goHome(){nav('home');loadWorlds();}
+function toast(msg,type=''){const t=$('toast');t.textContent=msg;t.className='toast show '+type;clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3200);}
 function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):''; }
 function grow(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  TYPEWRITER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function typewrite(el, text, speed=18){
+  return new Promise(resolve=>{
+    let i=0;
+    const cursor=document.createElement('span');
+    cursor.className='tw-cursor';
+    el.textContent='';
+    el.appendChild(cursor);
+    const t=setInterval(()=>{
+      if(i<text.length){
+        el.insertBefore(document.createTextNode(text[i]),cursor);
+        i++;
+        // scroll as text appears
+        const log=$('game-log');
+        log.scrollTop=log.scrollHeight;
+      } else {
+        clearInterval(t);
+        cursor.remove();
+        resolve();
+      }
+    },speed);
+  });
+}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  HOME
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function loadWorlds(){
-  const c=$('home-content'), {url,key}=cfg();
-  if(!url||!key){ c.innerHTML=`<div class="empty"><div style="font-size:30px;opacity:.3;margin-bottom:12px;">⚙</div><p style="font-size:15px;margin-bottom:8px;">Setup Required</p><p style="font-size:13px;margin-bottom:18px;">Configure your API keys to begin</p><button class="btn btn-p" onclick="openSettings()">Open Settings</button></div>`; return; }
+  const c=$('home-content'),{url,key}=cfg();
+  if(!url||!key){c.innerHTML=`<div class="empty"><div style="font-size:30px;opacity:.3;margin-bottom:12px;">⚙</div><p style="font-size:15px;margin-bottom:8px;">Setup Required</p><p style="font-size:13px;margin-bottom:18px;">Configure your API keys to begin</p><button class="btn btn-p" onclick="openSettings()">Open Settings</button></div>`;return;}
   c.innerHTML='<div class="empty"><span class="spin"></span></div>';
-  try {
-    const worlds = await sbG('worlds','select=*&order=created_at.desc');
-    if(!worlds?.length){
-      c.innerHTML=`<div class="empty"><div style="font-size:30px;opacity:.3;margin-bottom:12px;">🌐</div><p style="font-size:15px;margin-bottom:8px;">No worlds yet</p><p style="font-size:13px;color:var(--text3);margin-bottom:18px;">Step through a portal and begin</p><button class="btn btn-p" onclick="startFlow()">+ Enter a World</button></div>`;
-      return;
-    }
-    const g=document.createElement('div'); g.className='worlds-grid';
+  try{
+    const worlds=await sbG('worlds','select=*&order=created_at.desc');
+    if(!worlds?.length){c.innerHTML=`<div class="empty"><div style="font-size:30px;opacity:.3;margin-bottom:12px;">🌐</div><p style="font-size:15px;margin-bottom:8px;">No worlds yet</p><p style="font-size:13px;color:var(--text3);margin-bottom:18px;">Step through a portal and begin</p><button class="btn btn-p" onclick="startFlow()">+ Enter a World</button></div>`;return;}
+    const g=document.createElement('div');g.className='worlds-grid';
     worlds.forEach(w=>{
       const allW=[...Object.values(WORLDS).flat()];
-      const p=allW.find(x=>x.id===w.genre||x.name===w.world_name);
-      const d=document.createElement('div'); d.className='wcard';
+      const p=allW.find(x=>x.name===w.world_name);
+      const d=document.createElement('div');d.className='wcard';
       d.innerHTML=`<button class="btn btn-sm btn-d wcard-del" onclick="delWorld(event,'${w.id}')">✕</button>
         <div style="font-size:22px;margin-bottom:8px;">${p?.icon||'🌐'}</div>
         <div style="font-size:16px;font-weight:600;margin-bottom:3px;">${esc(w.world_name)}</div>
         <div style="font-size:11px;color:var(--accent);background:var(--accentG);padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:9px;">${esc(w.genre)}</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:4px;" id="wc-${w.id}">Loading…</div>
         <div style="font-size:11px;color:var(--text3);">${new Date(w.created_at).toLocaleDateString()}</div>`;
-      d.addEventListener('click',()=>enterWorld(w.id));
-      g.appendChild(d);
-      sbG('game_state',`world_id=eq.${w.id}&select=hp,current_location,qi_stage`).then(r=>{
-        const gs=r?.[0]; if(gs) $('wc-'+w.id).textContent=`${gs.current_location||'—'} · HP ${gs.hp}`;
+      d.addEventListener('click',()=>enterWorld(w.id));g.appendChild(d);
+      sbG('game_state',`world_id=eq.${w.id}&select=hp,current_location`).then(r=>{
+        const gs=r?.[0];if(gs)$('wc-'+w.id).textContent=`${gs.current_location||'—'} · HP ${gs.hp}`;
       }).catch(()=>{});
     });
-    c.innerHTML=''; c.appendChild(g);
-  } catch(e){ c.innerHTML=`<div class="empty"><p style="color:var(--red);margin-bottom:12px;">${esc(e.message)}</p><button class="btn btn-sm" onclick="openSettings()">Check Settings</button></div>`; }
+    c.innerHTML='';c.appendChild(g);
+  }catch(e){c.innerHTML=`<div class="empty"><p style="color:var(--red);margin-bottom:12px;">${esc(e.message)}</p><button class="btn btn-sm" onclick="openSettings()">Check Settings</button></div>`;}
 }
 
 async function delWorld(e,id){
-  e.stopPropagation();
-  if(!confirm('Delete world and all data?')) return;
-  try{
-    for(const t of ['conversation_history','inventory','standing_orders','session_log','power_system','allies','game_state'])
-      await sbD(t,`world_id=eq.${id}`).catch(()=>{});
-    await sbD('worlds',`id=eq.${id}`);
-    toast('Deleted','ok'); loadWorlds();
-  }catch(e){toast(e.message,'err');}
+  e.stopPropagation();if(!confirm('Delete world and all data?'))return;
+  try{for(const t of ['conversation_history','inventory','standing_orders','session_log','power_system','allies','game_state'])await sbD(t,`world_id=eq.${id}`).catch(()=>{});await sbD('worlds',`id=eq.${id}`);toast('Deleted','ok');loadWorlds();}catch(e){toast(e.message,'err');}
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  STEP 1 — WORLD PICKER
+//  WORLD PICKER
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function startFlow(){
-  selWorld=null;
-  $('wsearch').value='';
-  $('sr-area').style.display='none';
-  $('notfound-area').style.display='none';
-  $('world-preview').style.display='none';
-  $('next-btn').disabled=true;
-  buildTabs();
-  nav('pick-world');
+  selWorld=null;$('wsearch').value='';$('sr-area').style.display='none';$('notfound-area').style.display='none';$('world-preview').style.display='none';$('next-btn').disabled=true;
+  buildTabs();nav('pick-world');
 }
-
 function buildTabs(){
   TABS.forEach(cat=>{
-    const panel=$('tab-'+cat); panel.innerHTML='';
+    const panel=$('tab-'+cat);panel.innerHTML='';
     WORLDS[cat].forEach(w=>{
-      const c=document.createElement('div'); c.className='pcard'; c.id='pc-'+w.id;
+      const c=document.createElement('div');c.className='pcard';c.id='pc-'+w.id;
       c.innerHTML=`<div style="font-size:24px;margin-bottom:5px;">${w.icon}</div><div style="font-size:12px;font-weight:600;margin-bottom:2px;">${esc(w.name)}</div><div style="font-size:10px;color:var(--text3);">${esc(w.tag)}</div>`;
-      c.addEventListener('click',()=>pickWorld(w,'pc-'+w.id));
-      panel.appendChild(c);
+      c.addEventListener('click',()=>pickWorld(w,'pc-'+w.id));panel.appendChild(c);
     });
   });
 }
-
-function switchTab(cat, el){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  $('tab-'+cat).classList.add('active');
+function switchTab(cat,el){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));$('tab-'+cat).classList.add('active');}
+function pickWorld(w,cardId){
+  document.querySelectorAll('.pcard,.sr-card').forEach(c=>c.classList.remove('sel'));$(cardId)?.classList.add('sel');
+  selWorld={...w,isCustom:false};$('world-preview').style.display='block';$('pv-title').textContent=w.icon+' '+w.name;$('pv-lore').textContent=w.lore;$('next-btn').disabled=false;
 }
-
-function pickWorld(w, cardId){
-  document.querySelectorAll('.pcard,.sr-card').forEach(c=>c.classList.remove('sel'));
-  $(cardId)?.classList.add('sel');
-  selWorld={...w,isCustom:false};
-  $('world-preview').style.display='block';
-  $('pv-title').textContent=w.icon+' '+w.name;
-  $('pv-lore').textContent=w.lore;
-  $('next-btn').disabled=false;
-}
-
-// SEARCH
 async function doSearch(){
-  const q=$('wsearch').value.trim();
-  if(!q) return;
-  const {api}=cfg();
-  if(!api){ toast('Add your API key in Settings first','err'); openSettings(); return; }
-
-  const btn=$('sbtn');
-  btn.innerHTML='<span class="spin"></span>'; btn.disabled=true;
-  $('sr-area').style.display='none';
-  $('notfound-area').style.display='none';
-  $('world-preview').style.display='none';
-  $('next-btn').disabled=true;
-
-  // First check if it matches a preset
+  const q=$('wsearch').value.trim();if(!q)return;
+  const {api}=cfg();if(!api){toast('Add your API key in Settings first','err');openSettings();return;}
+  const btn=$('sbtn');btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
+  $('sr-area').style.display='none';$('notfound-area').style.display='none';$('world-preview').style.display='none';$('next-btn').disabled=true;
   const allW=[...Object.values(WORLDS).flat()];
   const preset=allW.find(w=>w.name.toLowerCase().includes(q.toLowerCase())||q.toLowerCase().includes(w.name.toLowerCase()));
-  if(preset){
-    btn.innerHTML='Search'; btn.disabled=false;
-    // Highlight that preset in its tab
-    const cat=TABS.find(t=>WORLDS[t].some(w=>w.id===preset.id));
-    if(cat){
-      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-      document.querySelector(`.tab:nth-child(${TABS.indexOf(cat)+1})`).classList.add('active');
-      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-      $('tab-'+cat).classList.add('active');
-    }
-    pickWorld(preset,'pc-'+preset.id);
-    toast('Found in presets!','ok');
-    return;
-  }
-
-  // Ask AI to search
-  try {
-    const r=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':api,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,
-        system:`You identify fictional worlds for a text RPG. Return ONLY raw JSON (no markdown): {"found":true|false,"results":[{"name":"...","genre":"...","lore":"2-3 sentence RPG-focused description of setting, factions, power systems"}]}. found=true if the query matches a known fictional IP (anime, novel, manhwa, game, movie, etc). found=false if it's unclear or completely unknown. Only return found=true if you actually know this IP.`,
-        messages:[{role:'user',content:q}]})
-    });
-    const d=await r.json();
-    if(!r.ok) throw new Error(d.error?.message||'API error');
-    const raw=d.content?.[0]?.text||'{"found":false}';
+  if(preset){btn.innerHTML='Search';btn.disabled=false;const cat=TABS.find(t=>WORLDS[t].some(w=>w.id===preset.id));if(cat){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));$('tab-'+cat).classList.add('active');const tabEls=document.querySelectorAll('.tab');tabEls[TABS.indexOf(cat)].classList.add('active');}pickWorld(preset,'pc-'+preset.id);toast('Found in presets!','ok');return;}
+  try{
+    const raw=await callAI(`You identify fictional worlds for a text RPG. Return ONLY raw JSON: {"found":true|false,"results":[{"name":"...","genre":"...","lore":"2-3 sentence RPG-focused description"}]}. found=true only if you actually know this IP.`,[{role:'user',content:q}],600);
     const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
-
-    if(parsed.found && parsed.results?.length){
-      // Show search results
-      $('sr-area').style.display='block';
-      const list=$('sr-list'); list.innerHTML='';
+    if(parsed.found&&parsed.results?.length){
+      $('sr-area').style.display='block';const list=$('sr-list');list.innerHTML='';
       parsed.results.forEach((w,i)=>{
-        const c=document.createElement('div'); c.className='sr-card'; c.id='src-'+i;
+        const c=document.createElement('div');c.className='sr-card';c.id='src-'+i;
         c.innerHTML=`<div style="font-size:14px;font-weight:600;margin-bottom:3px;">${esc(w.name)}</div><div style="font-size:11px;color:var(--accent);margin-bottom:6px;">${esc(w.genre)}</div><div style="font-size:12px;color:var(--text2);line-height:1.55;">${esc(w.lore)}</div>`;
-        c.addEventListener('click',()=>{
-          document.querySelectorAll('.pcard,.sr-card').forEach(x=>x.classList.remove('sel')); c.classList.add('sel');
-          selWorld={name:w.name,genre:w.genre,lore:w.lore,icon:'🌐',isCustom:false};
-          $('world-preview').style.display='block';
-          $('pv-title').textContent=w.name;
-          $('pv-lore').textContent=w.lore;
-          $('next-btn').disabled=false;
-        });
+        c.addEventListener('click',()=>{document.querySelectorAll('.pcard,.sr-card').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');selWorld={name:w.name,genre:w.genre,lore:w.lore,icon:'🌐',isCustom:false};$('world-preview').style.display='block';$('pv-title').textContent=w.name;$('pv-lore').textContent=w.lore;$('next-btn').disabled=false;});
         list.appendChild(c);
       });
-    } else {
-      // NOT FOUND — show manual entry form
-      $('notfound-area').style.display='block';
-      $('nf-query').textContent=q;
-      $('nf-name').value=q;
-    }
-  } catch(e){
-    // Fallback: show manual entry
-    $('notfound-area').style.display='block';
-    $('nf-query').textContent=q;
-    $('nf-name').value=q;
-  } finally {
-    btn.innerHTML='Search'; btn.disabled=false;
-  }
+    }else{$('notfound-area').style.display='block';$('nf-query').textContent=q;$('nf-name').value=q;}
+  }catch(e){$('notfound-area').style.display='block';$('nf-query').textContent=q;$('nf-name').value=q;}
+  finally{btn.innerHTML='Search';btn.disabled=false;}
 }
-
 function useCustomDesc(){
-  const name=$('nf-name').value.trim();
-  const desc=$('nf-desc').value.trim();
-  const genre=$('nf-genre').value.trim()||'Custom';
-  if(!name){ toast('Enter a world name','err'); return; }
-  if(!desc){ toast('Describe the world first','err'); return; }
-  selWorld={name,genre,lore:desc,icon:'✨',isCustom:true};
-  $('world-preview').style.display='block';
-  $('pv-title').textContent='✨ '+name;
-  $('pv-lore').textContent=desc;
-  $('next-btn').disabled=false;
-  toast('World set!','ok');
+  const name=$('nf-name').value.trim(),desc=$('nf-desc').value.trim(),genre=$('nf-genre').value.trim()||'Custom';
+  if(!name){toast('Enter a world name','err');return;}if(!desc){toast('Describe the world first','err');return;}
+  selWorld={name,genre,lore:desc,icon:'✨',isCustom:true};$('world-preview').style.display='block';$('pv-title').textContent='✨ '+name;$('pv-lore').textContent=desc;$('next-btn').disabled=false;toast('World set!','ok');
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  STEP 2 — CHARACTER
+//  CHARACTER CREATION
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function goToChar(){
-  if(!selWorld) return;
-  $('char-title').textContent=(selWorld.icon||'🌐')+' '+selWorld.name;
-  $('cname').value=''; $('capp').value=''; $('cback').value=''; $('cpers').value='';
-  nav('create-char');
-}
+function goToChar(){if(!selWorld)return;$('char-title').textContent=(selWorld.icon||'🌐')+' '+selWorld.name;$('cname').value='';$('capp').value='';$('cback').value='';$('cpers').value='';nav('create-char');}
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  CREATE WORLD + BEGIN
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function createAndBegin(){
-  const name=$('cname').value.trim(), app=$('capp').value.trim(),
-        back=$('cback').value.trim(), pers=$('cpers').value.trim();
-  if(!name){ toast('Enter a character name','err'); return; }
-  if(!selWorld){ toast('No world selected','err'); return; }
-  const {api}=cfg();
-  if(!api){ toast('Add your API key in Settings','err'); openSettings(); return; }
+  const name=$('cname').value.trim(),app=$('capp').value.trim(),back=$('cback').value.trim(),pers=$('cpers').value.trim();
+  if(!name){toast('Enter a character name','err');return;}
+  if(!selWorld){toast('No world selected','err');return;}
+  const {api}=cfg();if(!api){toast('Add your API key in Settings','err');openSettings();return;}
+  const btn=$('begin-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Building world…';
+  try{
+    const raw=await callAI(`Generate a DM system prompt and world config for a text RPG. Return ONLY raw JSON (no markdown):
+{"dm_prompt":"...","canon_rules":"...","starting_location":"...","starting_time":"Morning","currency_name":"..."}
 
-  const btn=$('begin-btn');
-  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Building world…';
-
-  try {
-    const r=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':api,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,
-        system:`Generate a DM system prompt and world config for a text RPG. Return ONLY raw JSON (no markdown backticks):
-{"dm_prompt":"...","canon_rules":"...","starting_location":"...","starting_time":"Morning"}
-
-dm_prompt (~300 words): Rich narrator persona. Second-person narration. Vivid scene-setting. Faithful to world lore. Power systems ONLY discovered through play — never granted at start. Universal abilities accessible via rare shops, ancient ruins, or special events — NEVER at the beginning. Use these exact stat tags whenever values change during play: [HP: X] [BERRY: X] [DAY: N] [LOCATION: name] [TIME: name] [STAGE: text] [POWER_SYSTEM: name] [POWER_LEVEL: level]. Track consequences. Maintain world tone.
-canon_rules: Short paragraph of 3-5 core physics/rules for this world.
-starting_location: A single evocative place name fitting this world and character.
-starting_time: One of Dawn/Morning/Afternoon/Evening/Night — pick what fits best dramatically.`,
-        messages:[{role:'user',content:`World: ${selWorld.name}\nGenre: ${selWorld.genre}\nLore: ${selWorld.lore||'Generate fitting lore'}\nCharacter Name: ${name}\nAppearance: ${app||'Not described'}\nBackstory: ${back||'Unknown past'}\nPersonality: ${pers||'Not described'}`}]})
-    });
-    const rd=await r.json();
-    if(!r.ok) throw new Error(rd.error?.message||'AI error');
-    const raw=rd.content?.[0]?.text||'{}';
+dm_prompt (~350 words): Rich narrator persona. Second-person narration. Vivid scene-setting. Faithful to world lore. Use VS Battles wiki terminology for power levels — Tier, Attack Potency, Speed, Durability, Intelligence classifications. Power systems ONLY discovered through play. Universal Shop exists outside reality — rare access moments only. Stat tags when values change: [HP: X] [BERRY: X] [DAY: N] [LOCATION: name] [TIME: name] [STAGE: text] [POWER_SYSTEM: name] [POWER_LEVEL: level] [TIER: text] [ATK: text] [SPD: text] [DUR: text] [INT: text]. Track consequences. Maintain world tone.
+canon_rules: Short paragraph of 3-5 core world physics/rules.
+starting_location: Single evocative place name fitting this world.
+starting_time: One of Dawn/Morning/Afternoon/Evening/Night.
+currency_name: The in-world currency name (e.g. Berries, Ryo, Zeni, Gold, Credits).`,
+      [{role:'user',content:`World: ${selWorld.name}\nGenre: ${selWorld.genre}\nLore: ${selWorld.lore||'Generate fitting lore'}\nCharacter: ${name}\nAppearance: ${app||'Not described'}\nBackstory: ${back||'Unknown past'}\nPersonality: ${pers||'Not described'}`}]);
     const gen=JSON.parse(raw.replace(/```json|```/g,'').trim());
-
-    const dmPr=gen.dm_prompt||`You are the DM of ${selWorld.name}. Narrate in second person. Character: ${name}. Embed stat changes as [HP: X] [BERRY: X] [DAY: N] [LOCATION: name] [TIME: name] when they occur.`;
-
+    const dmPr=gen.dm_prompt||`You are the DM of ${selWorld.name}. Narrate in second person. Character: ${name}. Embed stat changes using provided tags.`;
     const [world]=await sbP('worlds',{world_name:selWorld.name,genre:selWorld.genre,dm_system_prompt:dmPr,canon_rules:gen.canon_rules||''});
     const wid=world.id;
     await sbP('game_state',{world_id:wid,hp:100,berry:100,power_stage:'Unknown',current_day:1,current_location:gen.starting_location||selWorld.name,current_time_of_day:gen.starting_time||'Morning'});
-    await sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}`});
-
-    toast('World created!','ok');
-    enterWorld(wid,true);
-  } catch(e){
-    toast(e.message,'err');
-    btn.disabled=false; btn.innerHTML='Begin Adventure ↵';
-  }
+    await sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}|CUR:${gen.currency_name||'Gold'}`});
+    toast('World created!','ok');enterWorld(wid,true);
+  }catch(e){toast(e.message,'err');btn.disabled=false;btn.innerHTML='Begin Adventure ↵';}
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  ENTER WORLD
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function enterWorld(wid, opening=false){
-  curWorldId=wid; nav('game'); $('game-log').innerHTML='';
-  try {
-    const [[world],[gs],[ps]]=await Promise.all([
-      sbG('worlds',`id=eq.${wid}&select=*`),
-      sbG('game_state',`world_id=eq.${wid}&select=*`),
-      sbG('power_system',`world_id=eq.${wid}&select=*`)
-    ]);
-    curGS=gs; curPS=ps;
-    $('sb-world').textContent=world.world_name;
-    $('g-title').textContent=world.world_name;
-    const nm=ps?.notes?.match(/N:([^|]+)/); const ap=ps?.notes?.match(/A:([^|]+)/);
-    $('sb-name').textContent=nm?nm[1].trim():'Adventurer';
-    $('sb-arch').textContent=ap?ap[1].trim():'—';
-    updateSB(); checkMob();
-
-    if(opening){ addSys('The world takes shape…'); await genOpening(world,gs,ps); }
-    else {
+async function enterWorld(wid,opening=false){
+  curWorldId=wid;nav('game');$('game-log').innerHTML='';$('action-options').style.display='none';
+  try{
+    const [[world],[gs],[ps]]=await Promise.all([sbG('worlds',`id=eq.${wid}&select=*`),sbG('game_state',`world_id=eq.${wid}&select=*`),sbG('power_system',`world_id=eq.${wid}&select=*`)]);
+    curGS=gs;curPS=ps;
+    $('sb-world').textContent=world.world_name;$('g-title').textContent=world.world_name;
+    const nm=ps?.notes?.match(/N:([^|]+)/);const ap=ps?.notes?.match(/A:([^|]+)/);const cn=nm?nm[1].trim():'Adventurer';
+    $('sb-name').textContent=cn;$('sb-arch').textContent=ap?ap[1].trim():'—';
+    updateSB();checkMob();
+    // set shop currency label
+    const curM=ps?.notes?.match(/CUR:([^|]+)/);if(curM)$('shop-currency').textContent=curM[1].trim();
+    if(opening){addSys('The world takes shape…');await genOpening(world,gs,ps);}
+    else{
       const hist=await sbG('conversation_history',`world_id=eq.${wid}&select=role,content&order=created_at.asc&limit=60`);
-      if(hist?.length){ $('game-log').innerHTML=''; hist.forEach(m=>m.role==='user'?addP(m.content,false):addD(m.content,false)); scrollL(); }
+      if(hist?.length){$('game-log').innerHTML='';hist.forEach(m=>m.role==='user'?addP(m.content,false):addD(m.content,false,false));scrollL();}
       else addSys('Your adventure continues…');
     }
-  } catch(e){ addSys('Error: '+e.message); }
+  }catch(e){addSys('Error: '+e.message);}
 }
 
 async function genOpening(world,gs,ps){
-  const {api}=cfg();
-  const nm=ps?.notes?.match(/N:([^|]+)/); const cn=nm?nm[1].trim():'the protagonist';
+  const nm=ps?.notes?.match(/N:([^|]+)/);const cn=nm?nm[1].trim():'the protagonist';
   const ty=addTy();
-  try {
+  try{
     const orders=await sbG('standing_orders',`world_id=eq.${curWorldId}&select=rule_text`).catch(()=>[]);
     const ctx=buildCtx(gs,ps,orders,null,null,world.canon_rules);
-    const r=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json','x-api-key':api,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:world.dm_system_prompt+'\n\n'+ctx,
-        messages:[{role:'user',content:`Begin the story. Open scene for ${cn} in ${gs.current_location}. Vivid atmosphere — what they see, hear, sense, smell. DO NOT grant any power system or abilities. Hint at the world's power without giving access. End with a moment of tension, intrigue, or clear first choice. Include tags: [LOCATION: ${gs.current_location}] [TIME: ${gs.current_time_of_day}]`}]})
-    });
-    const d=await r.json(); if(!r.ok) throw new Error(d.error?.message);
-    const text=d.content?.[0]?.text||'';
-    ty.remove(); $('game-log').innerHTML=''; addD(text);
+    const text=await callAI(world.dm_system_prompt+'\n\n'+ctx,[{role:'user',content:`Begin the story. Open scene for ${cn} in ${gs.current_location}. Vivid atmosphere — what they see, hear, sense, smell. DO NOT grant any power system or abilities yet. Hint at the world's power without giving access. End with a moment of tension or clear first choice. Include: [LOCATION: ${gs.current_location}] [TIME: ${gs.current_time_of_day}]`}]);
+    ty.remove();$('game-log').innerHTML='';await addD(text,true,true);
     await sbP('conversation_history',{world_id:curWorldId,role:'assistant',content:text,scene_number:1});
-    parseStats(text);
-  } catch(e){ ty.remove(); addSys('Error: '+e.message); }
+    parseStats(text);await genOptions(text,world);
+  }catch(e){ty.remove();addSys('Error: '+e.message);}
 }
 
-function leaveGame(){ curWorldId=null; goHome(); }
+function leaveGame(){curWorldId=null;goHome();}
 
 function updateSB(){
-  const g=curGS, p=curPS; if(!g) return;
-  $('s-hp').textContent=g.hp??'—'; $('s-berry').textContent=g.berry??'—';
-  $('s-loc').textContent=g.current_location||'—'; $('s-day').textContent=g.current_day||1;
-  $('s-time').textContent=g.current_time_of_day||'—'; $('s-prog').textContent=g.power_stage||'—';
-  if(p){ $('s-psys').textContent=p.system_name||'—'; $('s-plvl').textContent=p.current_level||'—'; }
+  const g=curGS,p=curPS;if(!g)return;
+  $('s-hp').textContent=g.hp??'—';$('s-berry').textContent=g.berry??'—';
+  $('s-loc').textContent=g.current_location||'—';$('s-day').textContent=g.current_day||1;
+  $('s-time').textContent=g.current_time_of_day||'—';$('s-prog').textContent=g.power_stage||'—';
+  if(p){$('s-psys').textContent=p.system_name||'—';$('s-plvl').textContent=p.current_level||'—';}
+  $('s-tier').textContent=curVSB.tier||'—';$('s-atk').textContent=curVSB.attack_potency||'—';
+  $('s-spd').textContent=curVSB.speed||'—';$('s-dur').textContent=curVSB.durability||'—';$('s-int').textContent=curVSB.intelligence||'—';
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  SEND ACTION
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function sendAction(){
-  if(busy) return;
-  const inp=$('act-inp'), text=inp.value.trim();
-  if(!text||!curWorldId) return;
-  const {api}=cfg();
-  if(!api){ toast('Add your API key in Settings','err'); openSettings(); return; }
-  inp.value=''; grow(inp); addP(text); busy=true; $('send-btn').disabled=true;
+async function sendAction(text){
+  if(busy||!text.trim()||!curWorldId)return;
+  const {api}=cfg();if(!api){toast('Add your API key in Settings','err');openSettings();return;}
+  $('action-options').style.display='none';addP(text);busy=true;$('send-btn').disabled=true;
   const ty=addTy();
-  try {
-    const [[world],gs,ps]=await Promise.all([
-      sbG('worlds',`id=eq.${curWorldId}&select=*`),
-      sbG('game_state',`world_id=eq.${curWorldId}&select=*`).then(r=>r[0]),
-      sbG('power_system',`world_id=eq.${curWorldId}&select=*`).then(r=>r[0])
-    ]);
-    curGS=gs; curPS=ps;
+  try{
+    const [[world],gs,ps]=await Promise.all([sbG('worlds',`id=eq.${curWorldId}&select=*`),sbG('game_state',`world_id=eq.${curWorldId}&select=*`).then(r=>r[0]),sbG('power_system',`world_id=eq.${curWorldId}&select=*`).then(r=>r[0])]);
+    curGS=gs;curPS=ps;
     const lo=text.toLowerCase();
     const ni=['inventory','pack','items','shop','back room','backroom','bag','equipment','gear'].some(k=>lo.includes(k));
     const na=['crew','allies','team','party','companion','comrade'].some(k=>lo.includes(k));
-    const [hist,orders,inv,al]=await Promise.all([
-      sbG('conversation_history',`world_id=eq.${curWorldId}&select=role,content&order=created_at.desc&limit=10`),
-      sbG('standing_orders',`world_id=eq.${curWorldId}&select=rule_text,category`),
-      ni?sbG('inventory',`world_id=eq.${curWorldId}&select=*`):Promise.resolve(null),
-      na?sbG('allies',`world_id=eq.${curWorldId}&select=*`):Promise.resolve(null)
-    ]);
+    const [hist,orders,inv,al]=await Promise.all([sbG('conversation_history',`world_id=eq.${curWorldId}&select=role,content&order=created_at.desc&limit=10`),sbG('standing_orders',`world_id=eq.${curWorldId}&select=rule_text,category`),ni?sbG('inventory',`world_id=eq.${curWorldId}&select=*`):Promise.resolve(null),na?sbG('allies',`world_id=eq.${curWorldId}&select=*`):Promise.resolve(null)]);
     const ctx=buildCtx(gs,ps,orders,inv,al,world.canon_rules);
-    const msgs=[];
-    if(hist?.length) [...hist].reverse().forEach(m=>msgs.push({role:m.role,content:m.content}));
-    msgs.push({role:'user',content:text});
-    const r=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json','x-api-key':api,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:world.dm_system_prompt+'\n\n'+ctx,messages:msgs})
-    });
-    const d=await r.json(); if(!r.ok) throw new Error(d.error?.message||JSON.stringify(d));
-    const dm=d.content?.[0]?.text||'[No response]';
-    ty.remove(); addD(dm);
-    await Promise.all([
-      sbP('conversation_history',{world_id:curWorldId,role:'user',content:text,scene_number:gs?.current_day||1}),
-      sbP('conversation_history',{world_id:curWorldId,role:'assistant',content:dm,scene_number:gs?.current_day||1})
-    ]);
-    parseStats(dm);
-  } catch(e){ ty.remove(); addSys('Error: '+e.message); }
-  finally{ busy=false; $('send-btn').disabled=false; }
+    const msgs=[];if(hist?.length)[...hist].reverse().forEach(m=>msgs.push({role:m.role,content:m.content}));msgs.push({role:'user',content:text});
+    const dm=await callAI(world.dm_system_prompt+'\n\n'+ctx,msgs);
+    ty.remove();await addD(dm,true,true);
+    await Promise.all([sbP('conversation_history',{world_id:curWorldId,role:'user',content:text,scene_number:gs?.current_day||1}),sbP('conversation_history',{world_id:curWorldId,role:'assistant',content:dm,scene_number:gs?.current_day||1})]);
+    parseStats(dm);await genOptions(dm,world);
+  }catch(e){ty.remove();addSys('Error: '+e.message);}
+  finally{busy=false;$('send-btn').disabled=false;}
 }
 
+function sendFree(){const inp=$('act-inp'),text=inp.value.trim();if(!text)return;inp.value='';grow(inp);sendAction(text);}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  ACTION OPTIONS (4 choices)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function genOptions(dmText, world){
+  const ao=$('action-options');ao.style.display='none';
+  try{
+    const gs=curGS;
+    const raw=await callAI(`You generate 3 contextual action options for a text RPG player. Return ONLY raw JSON array of exactly 3 strings. Each should be a short, specific, interesting action the player could take RIGHT NOW based on the scene just described. Vary them — one could be bold, one cautious, one creative/social. Keep each under 12 words. No numbering. Just the action text.`,
+      [{role:'user',content:`World: ${world.world_name}\nScene just described: ${dmText.slice(0,600)}\nPlayer location: ${gs?.current_location||'unknown'}`}],400);
+    const opts=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    if(!Array.isArray(opts)||opts.length<1)return;
+    ao.innerHTML='';
+    const three=opts.slice(0,3);
+    three.forEach((opt,i)=>{
+      const btn=document.createElement('button');btn.className='opt-btn';
+      btn.innerHTML=`<div class="opt-num">${i+1}</div><div class="opt-text">${esc(opt)}</div>`;
+      btn.addEventListener('click',()=>sendAction(opt));
+      ao.appendChild(btn);
+    });
+    // Option 4 — free response
+    const free=document.createElement('button');free.className='opt-btn free';
+    free.innerHTML=`<div class="opt-num free">4</div><div class="opt-text" style="color:var(--text3);">Write your own response…</div>`;
+    free.addEventListener('click',()=>{$('act-inp').focus();});
+    ao.appendChild(free);
+    ao.style.display='flex';
+  }catch(e){/* options are optional — fail silently */}
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  CONTEXT BUILDER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function buildCtx(gs,ps,orders,inv,al,canon){
   const p=['=== CURRENT STATE ==='];
-  if(gs) p.push(`HP:${gs.hp} | Currency:${gs.berry} | Day:${gs.current_day} | Location:${gs.current_location} | Time:${gs.current_time_of_day} | Power Stage:${gs.power_stage}`);
-  if(ps) p.push(`Power System:${ps.system_name} | Level:${ps.current_level} | Abilities:${ps.special_abilities}`);
-  if(ps?.notes) p.push(`Character data:${ps.notes}`);
-  if(orders?.length) p.push('\n=== STANDING ORDERS ===\n'+orders.map(o=>`[${o.category}] ${o.rule_text}`).join('\n'));
-  if(inv?.length) p.push('\n=== INVENTORY ===\n'+inv.map(i=>`${i.item_name} x${i.quantity} [${i.status}]${i.notes?' — '+i.notes:''}`).join('\n'));
-  if(al?.length) p.push('\n=== ALLIES ===\n'+al.map(a=>`${a.name} (${a.relationship}) — ${a.status}`).join('\n'));
-  if(canon) p.push('\n=== WORLD CANON ===\n'+canon);
+  if(gs)p.push(`HP:${gs.hp} | Currency:${gs.berry} | Day:${gs.current_day} | Location:${gs.current_location} | Time:${gs.current_time_of_day} | Power Stage:${gs.power_stage}`);
+  if(curVSB.tier!=='—')p.push(`VS Battles — Tier:${curVSB.tier} | ATK:${curVSB.attack_potency} | SPD:${curVSB.speed} | DUR:${curVSB.durability} | INT:${curVSB.intelligence}`);
+  if(ps)p.push(`Power System:${ps.system_name} | Level:${ps.current_level} | Abilities:${ps.special_abilities}`);
+  if(ps?.notes)p.push(`Character:${ps.notes}`);
+  if(orders?.length)p.push('\n=== STANDING ORDERS ===\n'+orders.map(o=>`[${o.category}] ${o.rule_text}`).join('\n'));
+  if(inv?.length)p.push('\n=== INVENTORY ===\n'+inv.map(i=>`${i.item_name} x${i.quantity} [${i.status}]${i.notes?' — '+i.notes:''}`).join('\n'));
+  if(al?.length)p.push('\n=== ALLIES ===\n'+al.map(a=>`${a.name} (${a.relationship}) — ${a.status}`).join('\n'));
+  if(canon)p.push('\n=== WORLD CANON ===\n'+canon);
   return p.join('\n');
 }
 
@@ -851,101 +749,181 @@ function buildCtx(gs,ps,orders,inv,al,canon){
 //  STAT PARSING
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function parseStats(text){
-  if(!curGS) return;
+  if(!curGS)return;
   const m=rx=>{const r=text.match(rx);return r?r[1].trim():null;};
   const u={};
   const hp=m(/\[HP:\s*(-?\d+)\]/i),berry=m(/\[BERRY:\s*(-?\d+)\]/i),day=m(/\[DAY:\s*(\d+)\]/i),
         loc=m(/\[LOCATION:\s*([^\]]+)\]/i),time=m(/\[TIME:\s*([^\]]+)\]/i),stage=m(/\[STAGE:\s*([^\]]+)\]/i);
-  if(hp)u.hp=parseInt(hp); if(berry)u.berry=parseInt(berry); if(day)u.current_day=parseInt(day);
-  if(loc)u.current_location=loc; if(time)u.current_time_of_day=time; if(stage)u.power_stage=stage;
-  if(Object.keys(u).length){ try{await sbPa('game_state',`world_id=eq.${curWorldId}`,u);Object.assign(curGS,u);updateSB();}catch(e){} }
+  if(hp)u.hp=parseInt(hp);if(berry)u.berry=parseInt(berry);if(day)u.current_day=parseInt(day);
+  if(loc)u.current_location=loc;if(time)u.current_time_of_day=time;if(stage)u.power_stage=stage;
+  if(Object.keys(u).length){try{await sbPa('game_state',`world_id=eq.${curWorldId}`,u);Object.assign(curGS,u);updateSB();}catch(e){}}
   const pn=m(/\[POWER_SYSTEM:\s*([^\]]+)\]/i),pl=m(/\[POWER_LEVEL:\s*([^\]]+)\]/i);
-  if(pn||pl){
-    const pu={};
-    if(pn){pu.system_name=pn;if(curPS)curPS.system_name=pn;}
-    if(pl){pu.current_level=pl;if(curPS)curPS.current_level=pl;}
-    try{await sbPa('power_system',`world_id=eq.${curWorldId}`,pu);updateSB();}catch(e){}
+  if(pn||pl){const pu={};if(pn){pu.system_name=pn;if(curPS)curPS.system_name=pn;}if(pl){pu.current_level=pl;if(curPS)curPS.current_level=pl;}try{await sbPa('power_system',`world_id=eq.${curWorldId}`,pu);updateSB();}catch(e){}}
+  // VS Battles tags
+  const tier=m(/\[TIER:\s*([^\]]+)\]/i),atk=m(/\[ATK:\s*([^\]]+)\]/i),spd=m(/\[SPD:\s*([^\]]+)\]/i),dur=m(/\[DUR:\s*([^\]]+)\]/i),int=m(/\[INT:\s*([^\]]+)\]/i),pows=m(/\[POWERS:\s*([^\]]+)\]/i);
+  if(tier||atk||spd||dur||int||pows){
+    if(tier)curVSB.tier=tier;if(atk)curVSB.attack_potency=atk;if(spd)curVSB.speed=spd;if(dur)curVSB.durability=dur;if(int)curVSB.intelligence=int;if(pows)curVSB.powers=pows;
+    updateSB();
   }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  LOG
+//  UNIVERSAL SHOP
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function openShop(){$('shop-results').innerHTML='<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px;">Search for any item, ability, or technique from any fiction.<br>Items are priced based on your current power level and world currency.</div>';$('shop-ov').classList.add('open');}
+function closeShop(){$('shop-ov').classList.remove('open');}
+
+async function searchShop(){
+  const q=$('shop-query').value.trim();if(!q)return;
+  const btn=$('shop-btn');btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
+  $('shop-results').innerHTML='<div style="text-align:center;padding:20px;"><span class="spin"></span></div>';
+  try{
+    const gs=curGS,ps=curPS;
+    const curM=ps?.notes?.match(/CUR:([^|]+)/);const curName=curM?curM[1].trim():'Gold';
+    const worldName=ps?.notes?.[0]?ps.notes:curWorldId;
+    const [world]=await sbG('worlds',`id=eq.${curWorldId}&select=world_name,genre`);
+    const raw=await callAI(`You are the proprietor of the Universal Shop — a mysterious establishment that exists outside all fictional realities. You stock items, abilities, weapons, and techniques from ANY fiction. You verify canon accuracy meticulously.
+
+Return ONLY raw JSON array of 1-4 shop items for the search query:
+[{"name":"...","description":"...","canon_source":"...","canon_accurate":true,"price":NUMBER,"currency":"${curName}","power_requirement":"...","notes":"..."}]
+
+Rules:
+- Price in ${curName} based on: player's current power level (${ps?.current_level||'unknown'}), world tier (${curVSB.tier||'unknown'}), and item's raw power
+- Verify canon accuracy — if the item exists in the source material, describe it accurately. If fictional invention, mark canon_accurate: false
+- power_requirement: what level/stage the character should be to use it safely
+- Include items from the searched world OR the character's current world if relevant
+- Price range: weak items 100-1000, mid 1000-50000, powerful 50000-500000, godlike 1M+`,
+      [{role:'user',content:`Search: ${q}\nPlayer world: ${world?.world_name||'unknown'}\nPlayer power level: ${ps?.current_level||'unknown'}\nPlayer tier: ${curVSB.tier||'unknown'}\nCurrent currency: ${gs?.berry||0} ${curName}`}],800);
+    const items=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    if(!items?.length){$('shop-results').innerHTML='<div style="color:var(--text3);text-align:center;padding:20px;">No items found.</div>';return;}
+    $('shop-results').innerHTML=items.map((item,i)=>`
+      <div class="shop-item">
+        <div class="shop-item-name">${esc(item.name)} ${!item.canon_accurate?'<span style="font-size:10px;color:var(--amber);background:rgba(212,148,74,.15);padding:1px 6px;border-radius:3px;">Non-canon</span>':''}</div>
+        <div style="font-size:11px;color:var(--accent);margin-bottom:6px;">From: ${esc(item.canon_source||'Unknown')}</div>
+        <div class="shop-item-desc">${esc(item.description)}</div>
+        ${item.notes?`<div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-style:italic;">${esc(item.notes)}</div>`:''}
+        <div class="shop-item-footer">
+          <div>
+            <div class="shop-price">${Number(item.price).toLocaleString()} ${esc(item.currency)}</div>
+            <div class="shop-req">Req: ${esc(item.power_requirement||'None')}</div>
+          </div>
+          <button class="btn btn-p btn-sm" onclick="buyItem(${i},${JSON.stringify(item).replace(/"/g,'&quot;')})">Buy</button>
+        </div>
+      </div>`).join('');
+  }catch(e){$('shop-results').innerHTML=`<div style="color:var(--red);padding:16px;">${esc(e.message)}</div>`;}
+  finally{btn.innerHTML='Search';btn.disabled=false;}
+}
+
+async function buyItem(i, item){
+  if(!curGS||curGS.berry<item.price){toast('Not enough currency','err');return;}
+  if(!confirm(`Buy ${item.name} for ${Number(item.price).toLocaleString()} ${item.currency}?`))return;
+  try{
+    const newBerry=curGS.berry-item.price;
+    await sbPa('game_state',`world_id=eq.${curWorldId}`,{berry:newBerry});
+    curGS.berry=newBerry;updateSB();
+    await sbP('inventory',{world_id:curWorldId,item_name:item.name,status:'Owned',notes:item.description+' (From: '+item.canon_source+')',quantity:1});
+    // Narrate the purchase in game
+    const purchaseMsg=`*You acquire ${item.name} from the Universal Shop. ${item.description}*`;
+    addD(purchaseMsg,true,false);
+    toast('Purchased! Added to inventory.','ok');
+    closeShop();
+  }catch(e){toast(e.message,'err');}
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  LOG HELPERS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function addP(text,scroll=true){
-  const el=document.createElement('div'); el.className='le-p';
+  const el=document.createElement('div');el.className='le-p';
   el.innerHTML=`<div class="ll">You</div><div class="lb">${esc(text)}</div>`;
-  $('game-log').appendChild(el); if(scroll)scrollL();
+  $('game-log').appendChild(el);if(scroll)scrollL();
 }
-function addD(text,scroll=true){
-  const el=document.createElement('div'); el.className='le-d';
-  el.innerHTML=`<div class="ll">Narrator</div><div class="lb">${esc(text)}</div>`;
-  $('game-log').appendChild(el); if(scroll)scrollL();
+async function addD(text,scroll=true,animate=true){
+  const el=document.createElement('div');el.className='le-d';
+  const lb=document.createElement('div');lb.className='lb';
+  el.innerHTML='<div class="ll">Narrator</div>';el.appendChild(lb);
+  $('game-log').appendChild(el);if(scroll)scrollL();
+  if(animate){await typewrite(lb,text,14);}else{lb.textContent=text;}
+  if(scroll)scrollL();
 }
 function addSys(text){
-  const el=document.createElement('div'); el.className='le-s';
+  const el=document.createElement('div');el.className='le-s';
   el.innerHTML=`<div class="lb">${esc(text)}</div>`;
-  $('game-log').appendChild(el); scrollL();
+  $('game-log').appendChild(el);scrollL();
 }
 function addTy(){
-  const el=document.createElement('div'); el.className='le-d';
+  const el=document.createElement('div');el.className='le-d';
   el.innerHTML=`<div class="ll">Narrator</div><div class="ty"><div class="td"></div><div class="td"></div><div class="td"></div></div>`;
-  $('game-log').appendChild(el); scrollL(); return el;
+  $('game-log').appendChild(el);scrollL();return el;
 }
-function scrollL(){ const l=$('game-log'); l.scrollTop=l.scrollHeight; }
+function scrollL(){const l=$('game-log');l.scrollTop=l.scrollHeight;}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  MODALS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function openMod(type){
-  const body=$('mod-body'),foot=$('mod-foot'),title=$('mod-title');
-  foot.style.display='none'; foot.innerHTML='';
+  const body=$('mod-body'),foot=$('mod-foot'),title=$('mod-title'),inner=$('mod-inner');
+  foot.style.display='none';foot.innerHTML='';inner.className='modal';
   body.innerHTML='<div style="text-align:center;padding:20px;"><span class="spin"></span></div>';
   $('mod-ov').classList.add('open');
-  if(type==='inv'){
-    title.textContent='🎒 Inventory';
+
+  if(type==='vsb'){
+    title.textContent='📊 VS Battles Profile';
+    const gs=curGS,ps=curPS;
+    // Generate full VS Battles profile via AI
     try{
-      const items=await sbG('inventory',`world_id=eq.${curWorldId}&select=*`);
-      body.innerHTML=items?.length?items.map(i=>`<div class="irow"><div style="flex:1"><div style="font-size:14px;font-weight:500;">${esc(i.item_name)}</div><div style="font-size:12px;color:var(--text2);">${esc(i.notes||'')} <span style="color:var(--text3)">${esc(i.status||'')}</span></div></div><span style="font-size:12px;color:var(--accent);font-family:var(--mono);background:var(--accentG);padding:2px 8px;border-radius:4px;">×${i.quantity||1}</span></div>`).join(''):'<div style="color:var(--text3);text-align:center;padding:20px">Empty</div>';
+      const [world]=await sbG('worlds',`id=eq.${curWorldId}&select=world_name,canon_rules`);
+      const raw=await callAI(`You are a VS Battles wiki editor. Generate an accurate VS Battles wiki-style profile for this character. Return ONLY raw JSON:
+{"tier":"e.g. 9-C","attack_potency":"e.g. Street level","speed":"e.g. Normal Human","lifting_strength":"e.g. Average Human","striking_strength":"e.g. Street Class","durability":"e.g. Street level","stamina":"e.g. Average","range":"e.g. Standard melee range","intelligence":"e.g. Average","powers_and_abilities":["Power 1","Power 2"],"weaknesses":["Weakness 1"]}
+
+Use actual VS Battles tier notation. Be accurate to the character's current power level — NOT their peak canon level, but where they are NOW in their story based on the data provided.`,
+        [{role:'user',content:`World: ${world?.world_name}\nCharacter: ${ps?.notes||'unknown'}\nCurrent power system: ${ps?.system_name} — ${ps?.current_level}\nSpecial abilities: ${ps?.special_abilities}\nHP: ${gs?.hp}\nVS data so far: ${JSON.stringify(curVSB)}`}],600);
+      const profile=JSON.parse(raw.replace(/```json|```/g,'').trim());
+      // update curVSB
+      curVSB={tier:profile.tier||'—',attack_potency:profile.attack_potency||'—',speed:profile.speed||'—',durability:profile.durability||'—',intelligence:profile.intelligence||'—',powers:Array.isArray(profile.powers_and_abilities)?profile.powers_and_abilities.join(', '):'—'};
+      updateSB();
+      body.innerHTML=`
+        <div class="vsb-tier">${esc(profile.tier||'—')}</div>
+        <div class="vsb-row"><span class="vsb-label">Attack Potency</span><span class="vsb-val">${esc(profile.attack_potency||'—')}</span></div>
+        <div class="vsb-row"><span class="vsb-label">Speed</span><span class="vsb-val">${esc(profile.speed||'—')}</span></div>
+        <div class="vsb-row"><span class="vsb-label">Lifting Strength</span><span class="vsb-val">${esc(profile.lifting_strength||'—')}</span></div>
+        <div class="vsb-row"><span class="vsb-label">Striking Strength</span><span class="vsb-val">${esc(profile.striking_strength||'—')}</span></div>
+        <div class="vsb-row"><span class="vsb-label">Durability</span><span class="vsb-val">${esc(profile.durability||'—')}</span></div>
+        <div class="vsb-row"><span class="vsb-label">Stamina</span><span class="vsb-val">${esc(profile.stamina||'—')}</span></div>
+        <div class="vsb-row"><span class="vsb-label">Range</span><span class="vsb-val">${esc(profile.range||'—')}</span></div>
+        <div class="vsb-row"><span class="vsb-label">Intelligence</span><span class="vsb-val">${esc(profile.intelligence||'—')}</span></div>
+        <div class="vsb-row"><span class="vsb-label">Powers & Abilities</span><span class="vsb-val" style="color:var(--accent)">${Array.isArray(profile.powers_and_abilities)?profile.powers_and_abilities.map(esc).join(', '):esc(profile.powers_and_abilities||'None')}</span></div>
+        <div class="vsb-row"><span class="vsb-label">Weaknesses</span><span class="vsb-val" style="color:var(--red)">${Array.isArray(profile.weaknesses)?profile.weaknesses.map(esc).join(', '):esc(profile.weaknesses||'None known')}</span></div>`;
     }catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
+
+  } else if(type==='inv'){
+    title.textContent='🎒 Inventory';
+    try{const items=await sbG('inventory',`world_id=eq.${curWorldId}&select=*`);body.innerHTML=items?.length?items.map(i=>`<div class="irow"><div style="flex:1"><div style="font-size:14px;font-weight:500;">${esc(i.item_name)}</div><div style="font-size:12px;color:var(--text2);">${esc(i.notes||'')} <span style="color:var(--text3)">${esc(i.status||'')}</span></div></div><span style="font-size:12px;color:var(--accent);font-family:var(--mono);background:var(--accentG);padding:2px 8px;border-radius:4px;">×${i.quantity||1}</span></div>`).join(''):'<div style="color:var(--text3);text-align:center;padding:20px">Empty</div>';}catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
+
   } else if(type==='allies'){
     title.textContent='👥 Allies';
-    try{
-      const al=await sbG('allies',`world_id=eq.${curWorldId}&select=*`);
-      body.innerHTML=al?.length?al.map(a=>`<div style="padding:11px 0;border-bottom:1px solid var(--border)"><div style="font-size:14px;font-weight:600;">${esc(a.name)}</div><div style="font-size:11px;color:var(--accent);margin-bottom:3px;">${esc(a.relationship||'')}</div><div style="font-size:12px;color:var(--text2);">${esc(a.status||'')}${a.abilities?' — '+esc(a.abilities):''}</div>${a.notes?`<div style="font-size:11px;color:var(--text3);margin-top:2px;">${esc(a.notes)}</div>`:''}</div>`).join(''):'<div style="color:var(--text3);text-align:center;padding:20px">No allies yet</div>';
-    }catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
+    try{const al=await sbG('allies',`world_id=eq.${curWorldId}&select=*`);body.innerHTML=al?.length?al.map(a=>`<div style="padding:11px 0;border-bottom:1px solid var(--border)"><div style="font-size:14px;font-weight:600;">${esc(a.name)}</div><div style="font-size:11px;color:var(--accent);margin-bottom:3px;">${esc(a.relationship||'')}</div><div style="font-size:12px;color:var(--text2);">${esc(a.status||'')}${a.abilities?' — '+esc(a.abilities):''}</div>${a.notes?`<div style="font-size:11px;color:var(--text3);margin-top:2px;">${esc(a.notes)}</div>`:''}</div>`).join(''):'<div style="color:var(--text3);text-align:center;padding:20px">No allies yet</div>';}catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
+
   } else if(type==='orders'){
-    title.textContent='📋 Standing Orders';
-    foot.style.display='flex'; foot.innerHTML=`<button class="btn btn-p btn-sm" onclick="addOrder()">+ Add</button>`;
-    try{
-      const ord=await sbG('standing_orders',`world_id=eq.${curWorldId}&select=*`);
-      body.innerHTML=ord?.length?ord.map(o=>`<div class="irow"><div style="flex:1"><div style="font-size:13px;">${esc(o.rule_text)}</div><div style="font-size:11px;color:var(--text3);">${esc(o.category||'')}</div></div><button class="btn btn-sm btn-d" onclick="delOrder('${o.id}')">✕</button></div>`).join(''):'<div style="color:var(--text3);text-align:center;padding:20px">No standing orders</div>';
-    }catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
+    title.textContent='📋 Standing Orders';foot.style.display='flex';foot.innerHTML=`<button class="btn btn-p btn-sm" onclick="addOrder()">+ Add</button>`;
+    try{const ord=await sbG('standing_orders',`world_id=eq.${curWorldId}&select=*`);body.innerHTML=ord?.length?ord.map(o=>`<div class="irow"><div style="flex:1"><div style="font-size:13px;">${esc(o.rule_text)}</div><div style="font-size:11px;color:var(--text3);">${esc(o.category||'')}</div></div><button class="btn btn-sm btn-d" onclick="delOrder('${o.id}')">✕</button></div>`).join(''):'<div style="color:var(--text3);text-align:center;padding:20px">No standing orders</div>';}catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
+
   } else if(type==='log'){
     title.textContent='📖 Session Log';
-    try{
-      const logs=await sbG('session_log',`world_id=eq.${curWorldId}&select=*&order=created_at.desc&limit=20`);
-      body.innerHTML=logs?.length?logs.map(l=>`<div style="padding:11px 0;border-bottom:1px solid var(--border)"><div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Day ${l.day} · ${esc(l.location||'')}</div><div style="font-size:13px;">${esc(l.what_happened||'')}</div></div>`).join(''):'<div style="color:var(--text3);text-align:center;padding:20px">No entries yet</div>';
-    }catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
+    try{const logs=await sbG('session_log',`world_id=eq.${curWorldId}&select=*&order=created_at.desc&limit=20`);body.innerHTML=logs?.length?logs.map(l=>`<div style="padding:11px 0;border-bottom:1px solid var(--border)"><div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Day ${l.day} · ${esc(l.location||'')}</div><div style="font-size:13px;">${esc(l.what_happened||'')}</div></div>`).join(''):'<div style="color:var(--text3);text-align:center;padding:20px">No entries yet</div>';}catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
   }
 }
-function closeMod(){ $('mod-ov').classList.remove('open'); }
-async function addOrder(){
-  const rule=prompt('Standing order rule:'); if(!rule) return;
-  const cat=prompt('Category (e.g. Combat, Social):')||'General';
-  try{await sbP('standing_orders',{world_id:curWorldId,rule_text:rule,category:cat});openMod('orders');}catch(e){toast(e.message,'err');}
-}
-async function delOrder(id){
-  if(!confirm('Delete?')) return;
-  try{await sbD('standing_orders',`id=eq.${id}`);openMod('orders');}catch(e){toast(e.message,'err');}
-}
+function closeMod(){$('mod-ov').classList.remove('open');}
+async function addOrder(){const rule=prompt('Standing order rule:');if(!rule)return;const cat=prompt('Category:')||'General';try{await sbP('standing_orders',{world_id:curWorldId,rule_text:rule,category:cat});openMod('orders');}catch(e){toast(e.message,'err');}}
+async function delOrder(id){if(!confirm('Delete?'))return;try{await sbD('standing_orders',`id=eq.${id}`);openMod('orders');}catch(e){toast(e.message,'err');}}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  MOBILE + INIT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function checkMob(){ const t=$('mob-tog'); if(t) t.style.display=window.innerWidth<=640?'flex':'none'; }
-function toggleSidebar(){ $('sidebar').classList.toggle('mob'); }
+function checkMob(){const t=$('mob-tog');if(t)t.style.display=window.innerWidth<=640?'flex':'none';}
+function toggleSidebar(){$('sidebar').classList.toggle('mob');}
 window.addEventListener('resize',checkMob);
-loadWorlds(); checkMob();
+loadWorlds();checkMob();
 </script>
 </body>
 </html>
