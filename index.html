@@ -298,7 +298,10 @@
 <!-- GAME -->
 <div id="game" class="screen" style="flex-direction:row;height:100vh;overflow:hidden;">
   <div class="sidebar" id="sidebar">
-    <div class="sb-hd" id="sb-world">—</div>
+    <div class="sb-hd" style="display:flex;align-items:center;justify-content:space-between;">
+      <span id="sb-world">—</span>
+      <button class="btn btn-ico btn-sm" id="sb-close" onclick="toggleSidebar()" style="display:none;font-size:16px;">✕</button>
+    </div>
     <div class="sb-char">
       <div style="font-size:13px;font-weight:600;" id="sb-name">—</div>
       <div style="font-size:11px;color:var(--text3);margin-top:2px;" id="sb-arch">—</div>
@@ -1202,7 +1205,11 @@ async function delOrder(id){if(!confirm('Delete?'))return;try{await sbD('standin
 //  MOBILE + INIT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function checkMob(){const t=$('mob-tog');if(t)t.style.display=window.innerWidth<=640?'flex':'none';}
-function toggleSidebar(){$('sidebar').classList.toggle('mob');}
+function toggleSidebar(){
+  $('sidebar').classList.toggle('mob');
+  const isMob=window.innerWidth<=640;
+  if(isMob)$('sb-close').style.display=$('sidebar').classList.contains('mob')?'flex':'none';
+}
 window.addEventListener('resize',checkMob);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
