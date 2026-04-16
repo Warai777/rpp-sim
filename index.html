@@ -887,6 +887,27 @@ function updateSB(){
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  DICE ROLL
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function rollDice(){
+  const roll=Math.floor(Math.random()*20)+1; // d20
+  let outcome, color;
+  if(roll===20){outcome='Critical Success';color='#4caf82';}
+  else if(roll>=15){outcome='Success';color='#4caf82';}
+  else if(roll>=10){outcome='Partial Success';color='#d4944a';}
+  else if(roll>=5){outcome='Failure';color='#e05555';}
+  else{outcome='Critical Failure';color='#e05555';}
+  return {roll,outcome,color};
+}
+
+function showRoll(roll, outcome, color){
+  const el=document.createElement('div');
+  el.style.cssText=`display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--bg2);border:1px solid ${color};border-radius:8px;margin-bottom:4px;`;
+  el.innerHTML=`<span style="font-size:22px;font-weight:700;color:${color};font-family:var(--mono);">${roll}</span><span style="font-size:12px;color:${color};font-weight:600;">${outcome}</span><span style="font-size:11px;color:var(--text3);">d20 roll</span>`;
+  $('game-log').appendChild(el);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  SEND ACTION
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Cache world + standing orders — these rarely change mid-session
@@ -896,13 +917,17 @@ async function sendAction(text){
   if(busy||!text.trim()||!curWorldId)return;
   const {api}=cfg();if(!api){toast('Add your API key in Settings','err');openSettings();return;}
   $('action-options').style.display='none';addP(text);busy=true;$('send-btn').disabled=true;
+
+  // Roll dice and show result before DM responds
+  const {roll,outcome,color}=rollDice();
+  showRoll(roll,outcome,color);
+
   const ty=addTy();
   try{
     const lo=text.toLowerCase();
     const ni=['inventory','pack','items','shop','back room','backroom','bag','equipment','gear'].some(k=>lo.includes(k));
     const na=['crew','allies','team','party','companion','comrade'].some(k=>lo.includes(k));
 
-    // Fetch only what we need — world+orders cached, gs/ps/hist always fresh but in parallel
     const fetches=[
       cachedWorld ? Promise.resolve([[cachedWorld]]) : sbG('worlds',`id=eq.${curWorldId}&select=*`).then(r=>{cachedWorld=r[0];return [r];}),
       sbG('conversation_history',`world_id=eq.${curWorldId}&select=role,content&order=created_at.desc&limit=10`),
@@ -912,22 +937,22 @@ async function sendAction(text){
     ];
     const [worldRes, hist, orders, inv, al] = await Promise.all(fetches);
     const world = cachedWorld || (Array.isArray(worldRes[0]) ? worldRes[0][0] : worldRes[0]);
-
-    // Use in-memory curGS/curPS — only re-fetch if they seem stale
     const gs=curGS, ps=curPS;
 
-    const ctx=buildCtx(gs,ps,orders,inv,al,world.canon_rules);
+    // Inject dice roll result into context so DM narrates accordingly
+    const diceCtx=`\n=== DICE ROLL ===\nThe player rolled a d20: ${roll}/20 — ${outcome}.\nNarrate the outcome of their action reflecting this roll. Critical Success (20) = extraordinary result beyond expectations. Success (15-19) = clean achievement. Partial Success (10-14) = achieved but with a complication or cost. Failure (5-9) = the action fails, consequences follow. Critical Failure (1-4) = fails badly, something goes wrong beyond just not succeeding.`;
+
+    const ctx=buildCtx(gs,ps,orders,inv,al,world.canon_rules)+diceCtx;
     const msgs=[];if(hist?.length)[...hist].reverse().forEach(m=>msgs.push({role:m.role,content:m.content}));msgs.push({role:'user',content:text});
     ty.remove();
     const dm=await streamDM(world.dm_system_prompt+'\n\n'+ctx,msgs);
 
-    // Save to DB and parse stats in parallel after response
     await Promise.all([
-      sbP('conversation_history',{world_id:curWorldId,role:'user',content:text,scene_number:gs?.current_day||1}),
+      sbP('conversation_history',{world_id:curWorldId,role:'user',content:`[Roll: ${roll} — ${outcome}] ${text}`,scene_number:gs?.current_day||1}),
       sbP('conversation_history',{world_id:curWorldId,role:'assistant',content:dm,scene_number:gs?.current_day||1})
     ]);
     parseStats(dm);
-    genOptions(dm,world); // don't await — let options load in background
+    genOptions(dm,world);
   }catch(e){ty.remove();addSys('Error: '+e.message);}
   finally{busy=false;$('send-btn').disabled=false;}
 }
@@ -1004,7 +1029,40 @@ async function parseStats(text){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  UNIVERSAL SHOP
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function openShop(){$('shop-results').innerHTML='<div style="color:var(--text3);text-align:center;padding:30px;font-size:13px;">Search for any item, ability, or technique from any fiction.<br>Items are priced based on your current power level and world currency.</div>';$('shop-ov').classList.add('open');}
+async function openShop(){
+  $('shop-ov').classList.add('open');
+  const recsEl=$('shop-results');
+  recsEl.innerHTML='<div style="text-align:center;padding:20px;"><span class="spin"></span><div style="font-size:12px;color:var(--text3);margin-top:8px;">Analyzing your situation…</div></div>';
+  try{
+    const gs=curGS,ps=curPS;
+    const [world]=await sbG('worlds',`id=eq.${curWorldId}&select=world_name,genre`);
+    const curM=ps?.notes?.match(/CUR:([^|$\n]+)/);
+    let curName=curM?curM[1].trim():'';
+    if(!curName){const wn=((world?.world_name||'')+' '+(world?.genre||'')).toLowerCase();if(wn.includes('one piece')||wn.includes('pirate'))curName='Berries';else if(wn.includes('naruto')||wn.includes('shinobi'))curName='Ryo';else if(wn.includes('dragon ball'))curName='Zeni';else if(wn.includes('bleach'))curName='Kan';else if(wn.includes('attack on titan'))curName='Eldian Marks';else if(wn.includes('cyberpunk'))curName='Eddies';else if(wn.includes('witcher'))curName='Crowns';else if(wn.includes('mistborn'))curName='Clips';else if(wn.includes('elden ring'))curName='Runes';else if(wn.includes('dark souls'))curName='Souls';else if(wn.includes('final fantasy'))curName='Gil';else if(wn.includes('jujutsu'))curName='Yen';else if(wn.includes('demon slayer'))curName='Mon';else if(wn.includes('solo leveling'))curName='Won';else curName='Gold';}
+    $('shop-currency').textContent=curName;
+    const balance=gs?.berry||0;
+    const raw=await callAI(
+`You are the Universal Shop proprietor. Analyze this player's situation and recommend 1-3 items they can actually afford that would genuinely help them right now.
+Output ONLY pipe-separated lines or the word NONE:
+NAME|SOURCE|SHORT_DESCRIPTION|PRICE_NUMBER|POWER_REQUIREMENT|yes_or_no_canon
+Rules:
+- ONLY recommend items the player can afford (balance: ${balance} ${curName})
+- Items must be genuinely useful given their current situation, location, and power level
+- Price items realistically within their budget
+- If nothing useful and affordable exists, output exactly: NONE
+- No extra text, just the lines or NONE`,
+      [{role:'user',content:`World: ${world?.world_name}\nBalance: ${balance} ${curName}\nHP: ${gs?.hp}\nLocation: ${gs?.current_location}\nPower: ${ps?.current_level||'unknown'} — ${ps?.system_name||'unknown'}\nAbilities: ${ps?.special_abilities||'none'}\nStage: ${gs?.power_stage||'beginning'}`}],600);
+    if(raw.trim()==='NONE'||!raw.includes('|')){
+      recsEl.innerHTML=`<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;">Recommendations</div><div style="color:var(--text3);font-size:13px;padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:16px;">No recommendations — nothing affordable or useful for your current situation.</div><div style="font-size:11px;color:var(--text3);margin-top:4px;">Search for anything below.</div>`;
+      return;
+    }
+    const recItems=parseShopText(raw,curName);
+    shopItems=recItems;
+    recsEl.innerHTML=`<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">Recommended for you</div>${recItems.map((item,i)=>`<div class="shop-item" style="border-color:var(--accentD);"><div class="shop-item-name">${esc(item.name)} <span style="font-size:10px;color:var(--accent);background:var(--accentG);padding:1px 6px;border-radius:3px;">Recommended</span>${!item.canon_accurate?' <span style="font-size:10px;color:var(--amber);background:rgba(212,148,74,.15);padding:1px 6px;border-radius:3px;">Fan-made</span>':''}</div><div style="font-size:11px;color:var(--accent);margin-bottom:6px;">From: ${esc(item.canon_source)}</div><div class="shop-item-desc">${esc(item.description)}</div><div class="shop-item-footer"><div><div class="shop-price">${Number(item.price).toLocaleString()} ${esc(item.currency)}</div><div class="shop-req">Req: ${esc(item.power_requirement)}</div></div><button class="btn btn-p btn-sm" onclick="buyItem(${i})">Buy</button></div></div>`).join('')}<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin:16px 0 6px;">Search anything else</div>`;
+  }catch(e){
+    recsEl.innerHTML='<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px;">Search for any item, ability, or technique from any fiction.</div>';
+  }
+}
 function closeShop(){$('shop-ov').classList.remove('open');}
 
 let shopItems=[];
