@@ -949,31 +949,31 @@ async function sendAction(text){
   const {api}=cfg();if(!api){toast('Add your API key in Settings','err');openSettings();return;}
   $('action-options').style.display='none';addP(text);busy=true;$('send-btn').disabled=true;
 
-  // Roll dice and show result before DM responds
   const {roll,outcome,color}=rollDice();
   showRoll(roll,outcome,color);
 
   const ty=addTy();
   try{
     const lo=text.toLowerCase();
-    const ni=['inventory','pack','items','shop','back room','backroom','bag','equipment','gear'].some(k=>lo.includes(k));
     const na=['crew','allies','team','party','companion','comrade'].some(k=>lo.includes(k));
 
     const fetches=[
       cachedWorld ? Promise.resolve([[cachedWorld]]) : sbG('worlds',`id=eq.${curWorldId}&select=*`).then(r=>{cachedWorld=r[0];return [r];}),
       sbG('conversation_history',`world_id=eq.${curWorldId}&select=role,content&order=created_at.desc&limit=10`),
       cachedOrders !== null ? Promise.resolve(cachedOrders) : sbG('standing_orders',`world_id=eq.${curWorldId}&select=rule_text,category`).then(r=>{cachedOrders=r;return r;}),
-      ni ? sbG('inventory',`world_id=eq.${curWorldId}&select=*`) : Promise.resolve(null),
+      sbG('inventory',`world_id=eq.${curWorldId}&select=*`), // always fetch inventory
       na ? sbG('allies',`world_id=eq.${curWorldId}&select=*`) : Promise.resolve(null),
     ];
     const [worldRes, hist, orders, inv, al] = await Promise.all(fetches);
     const world = cachedWorld || (Array.isArray(worldRes[0]) ? worldRes[0][0] : worldRes[0]);
     const gs=curGS, ps=curPS;
 
-    // Inject dice roll result into context so DM narrates accordingly
     const diceCtx=`\n=== DICE ROLL ===\nThe player rolled a d20: ${roll}/20 — ${outcome}.\nNarrate the outcome of their action reflecting this roll. Critical Success (20) = extraordinary result beyond expectations. Success (15-19) = clean achievement. Partial Success (10-14) = achieved but with a complication or cost. Failure (5-9) = the action fails, consequences follow. Critical Failure (1-4) = fails badly, something goes wrong beyond just not succeeding.`;
 
-    const ctx=buildCtx(gs,ps,orders,inv,al,world.canon_rules)+diceCtx;
+    // Add item consumption instruction to context
+    const itemCtx=inv?.length?`\n=== ITEM CONSUMPTION ===\nIf the player uses or consumes an item from their inventory, include [USE_ITEM: exact item name] in your response. The system will automatically remove it or reduce quantity. Only include this tag if an item is actually consumed or used up in this action.`:'';
+
+    const ctx=buildCtx(gs,ps,orders,inv,al,world.canon_rules)+diceCtx+itemCtx;
     const msgs=[];if(hist?.length)[...hist].reverse().forEach(m=>msgs.push({role:m.role,content:m.content}));msgs.push({role:'user',content:text});
     ty.remove();
     const dm=await streamDM(world.dm_system_prompt+'\n\n'+ctx,msgs);
@@ -983,7 +983,8 @@ async function sendAction(text){
       sbP('conversation_history',{world_id:curWorldId,role:'assistant',content:dm,scene_number:gs?.current_day||1})
     ]);
     parseStats(dm);
-    genOptions(dm,world);
+    consumeItems(dm, inv);
+    genOptions(dm, world, text); // pass player action for context
   }catch(e){ty.remove();addSys('Error: '+e.message);}
   finally{busy=false;$('send-btn').disabled=false;}
 }
@@ -991,31 +992,56 @@ async function sendAction(text){
 function sendFree(){const inp=$('act-inp'),text=inp.value.trim();if(!text)return;inp.value='';grow(inp);sendAction(text);}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  ITEM CONSUMPTION
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function consumeItems(dmText, inv){
+  if(!inv?.length) return;
+  const matches=[...dmText.matchAll(/\[USE_ITEM:\s*([^\]]+)\]/gi)];
+  for(const match of matches){
+    const usedName=match[1].trim().toLowerCase();
+    const item=inv.find(i=>i.item_name.toLowerCase()===usedName||usedName.includes(i.item_name.toLowerCase()));
+    if(!item) continue;
+    try{
+      if(item.quantity>1){
+        await sbPa('inventory',`id=eq.${item.id}`,{quantity:item.quantity-1});
+        toast(`Used 1× ${item.item_name} (${item.quantity-1} remaining)`,'ok');
+      } else {
+        await sbD('inventory',`id=eq.${item.id}`);
+        toast(`${item.item_name} used up — removed from inventory`,'ok');
+      }
+    }catch(e){console.error('Item consume error:',e);}
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  ACTION OPTIONS (4 choices)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function genOptions(dmText, world){
+async function genOptions(dmText, world, playerAction=''){
   const ao=$('action-options');ao.style.display='none';
   try{
     const gs=curGS;
-    const raw=await callAI(`You generate 3 contextual action options for a text RPG player. Return ONLY raw JSON array of exactly 3 strings. Each should be a short, specific, interesting action the player could take RIGHT NOW based on the scene just described. Vary them — one could be bold, one cautious, one creative/social. Keep each under 12 words. No numbering. Just the action text.`,
-      [{role:'user',content:`World: ${world.world_name}\nScene just described: ${dmText.slice(0,600)}\nPlayer location: ${gs?.current_location||'unknown'}`}],400);
+    // Extract last thing said/asked in the scene for better context
+    const lastDialogue=dmText.match(/"([^"]{10,100})"\s*(?:he|she|they|it)?\s*(?:says?|asks?|said|asked)?[^"]*$/i)?.[1]||'';
+    const raw=await callAI(
+`You generate 3 contextual action options for a text RPG player. Return ONLY a raw JSON array of exactly 3 strings.
+The options must be DIRECTLY relevant to the immediate situation — if a character just asked a question, at least 2 options should be responses to that question. If the player is in a conversation, options should reflect conversational choices. If in combat, combat choices. Always match the exact moment.
+Keep each option under 12 words. Vary tone — one direct, one cautious, one unexpected. No numbering.`,
+      [{role:'user',content:`World: ${world.world_name}\nPlayer just did: ${playerAction}\nScene ending: ${dmText.slice(-400)}\nLast dialogue heard: ${lastDialogue||'none'}\nLocation: ${gs?.current_location||'unknown'}`}],400);
     const opts=JSON.parse(raw.replace(/```json|```/g,'').trim());
     if(!Array.isArray(opts)||opts.length<1)return;
     ao.innerHTML='';
-    const three=opts.slice(0,3);
-    three.forEach((opt,i)=>{
+    opts.slice(0,3).forEach((opt,i)=>{
       const btn=document.createElement('button');btn.className='opt-btn';
       btn.innerHTML=`<div class="opt-num">${i+1}</div><div class="opt-text">${esc(opt)}</div>`;
       btn.addEventListener('click',()=>sendAction(opt));
       ao.appendChild(btn);
     });
-    // Option 4 — free response
     const free=document.createElement('button');free.className='opt-btn free';
     free.innerHTML=`<div class="opt-num free">4</div><div class="opt-text" style="color:var(--text3);">Write your own response…</div>`;
     free.addEventListener('click',()=>{$('act-inp').focus();});
     ao.appendChild(free);
     ao.style.display='flex';
-  }catch(e){/* options are optional — fail silently */}
+  }catch(e){/* fail silently */}
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
