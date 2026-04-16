@@ -700,6 +700,7 @@ async function createAndBegin(){
 {"dm_prompt":"...","canon_rules":"...","starting_location":"...","starting_time":"Morning","currency_name":"..."}
 
 dm_prompt (~350 words): Rich narrator persona. Second-person narration. Vivid scene-setting. Faithful to world lore. Use VS Battles wiki terminology for power levels — Tier, Attack Potency, Speed, Durability, Intelligence classifications. Power systems ONLY discovered through play. Universal Shop exists outside reality — rare access moments only. Stat tags when values change: [HP: X] [BERRY: X] [DAY: N] [LOCATION: name] [TIME: name] [STAGE: text] [POWER_SYSTEM: name] [POWER_LEVEL: level] [TIER: text] [ATK: text] [SPD: text] [DUR: text] [INT: text]. Track consequences. Maintain world tone.
+CRITICAL: NEVER write choice menus, option lists, [A]/[B]/[C] choices, "Your options are:", or any kind of numbered/lettered action list in responses. The interface handles choices automatically. Just narrate the scene and end on tension or an open moment. The player decides what to do.
 canon_rules: Short paragraph of 3-5 core world physics/rules.
 starting_location: Single evocative place name fitting this world.
 starting_time: One of Dawn/Morning/Afternoon/Evening/Night.
@@ -856,6 +857,7 @@ function buildCtx(gs,ps,orders,inv,al,canon){
   if(inv?.length)p.push('\n=== INVENTORY ===\n'+inv.map(i=>`${i.item_name} x${i.quantity} [${i.status}]${i.notes?' — '+i.notes:''}`).join('\n'));
   if(al?.length)p.push('\n=== ALLIES ===\n'+al.map(a=>`${a.name} (${a.relationship}) — ${a.status}`).join('\n'));
   if(canon)p.push('\n=== WORLD CANON ===\n'+canon);
+  p.push('\n=== NARRATOR RULES ===\nNEVER write choice menus, [A]/[B]/[C] options, numbered action lists, or "Your options are:" prompts. The interface generates choices automatically. Just narrate — describe what happens, what the character perceives, consequences of actions. End on an open moment or tension. Let the player decide.');
   return p.join('\n');
 }
 
