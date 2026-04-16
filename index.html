@@ -650,67 +650,31 @@ function renderMarkdown(text){
     .replace(/\n/g,'<br>');
 }
 
-// Stream narrator text — fetch streams in background, then typewrite smoothly
+// Stream narrator text directly — no auto-scroll, player controls reading
 async function streamDM(system, messages, maxTokens=1000){
-  // Remove typing indicator
   const ty=$('game-log').querySelector('.le-d:last-child .ty');
   if(ty)ty.closest('.le-d')?.remove();
 
-  // Create bubble immediately so user sees it appearing
   const el=document.createElement('div');el.className='le-d';
   const lb=document.createElement('div');lb.className='lb';
   lb.style.whiteSpace='normal';
-  const waitCursor=document.createElement('span');waitCursor.className='tw-cursor';
-  lb.appendChild(waitCursor);
   el.innerHTML='<div class="ll">Narrator</div>';
   el.appendChild(lb);
   $('game-log').appendChild(el);
-  scrollL();
 
-  // Stream silently in background — show a progress indicator only
-  let charCount=0;
+  const cursor=document.createElement('span');cursor.className='tw-cursor';
+  lb.appendChild(cursor);
+
   const full=await callAIStream(system,messages,maxTokens,(chunk,fullSoFar)=>{
-    charCount=fullSoFar.length;
-    // Just pulse the cursor to show activity — no jittery text updates
-    waitCursor.style.opacity=charCount%20<10?'1':'0.3';
+    const display=stripStatTags(fullSoFar);
+    lb.innerHTML=renderMarkdown(display);
+    lb.appendChild(cursor);
+    // No auto-scroll — player reads at their own pace
   });
 
-  waitCursor.remove();
-
-  // Now typewrite the clean text smoothly
-  const display=stripStatTags(full);
-  await typewriteHTML(lb, display);
-  scrollL();
+  cursor.remove();
+  lb.innerHTML=renderMarkdown(stripStatTags(full));
   return full;
-}
-
-// Typewrite plain text into element smoothly, scrolling only at end of each line
-function typewriteHTML(el, text, speed=12){
-  return new Promise(resolve=>{
-    const rendered=renderMarkdown(text);
-    // Strip HTML to get plain chars for typing, then reveal rendered HTML progressively
-    const plain=text.replace(/<[^>]+>/g,'');
-    el.innerHTML='';
-    const cursor=document.createElement('span');cursor.className='tw-cursor';
-    el.appendChild(cursor);
-    let i=0;
-    // Type character by character into a text buffer, render markdown of buffer
-    let buf='';
-    const t=setInterval(()=>{
-      if(i<text.length){
-        buf+=text[i]; i++;
-        el.innerHTML=renderMarkdown(buf);
-        el.appendChild(cursor);
-        // Only scroll when reaching end of a sentence or paragraph — not every character
-        if('.!?\n'.includes(text[i-1])) scrollL();
-      } else {
-        clearInterval(t);
-        cursor.remove();
-        el.innerHTML=renderMarkdown(text);
-        resolve();
-      }
-    },speed);
-  });
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1149,28 +1113,27 @@ async function buyItem(i){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  LOG HELPERS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function addP(text,scroll=true){
+function addP(text){
   const el=document.createElement('div');el.className='le-p';
   el.innerHTML=`<div class="ll">You</div><div class="lb">${esc(text)}</div>`;
-  $('game-log').appendChild(el);if(scroll)scrollL();
+  $('game-log').appendChild(el);
 }
-async function addD(text,scroll=true,animate=true){
+async function addD(text,scroll=false,animate=false){
   const el=document.createElement('div');el.className='le-d';
   const lb=document.createElement('div');lb.className='lb';
   el.innerHTML='<div class="ll">Narrator</div>';el.appendChild(lb);
-  $('game-log').appendChild(el);if(scroll)scrollL();
-  if(animate){await typewrite(lb,text,14);}else{lb.textContent=text;}
-  if(scroll)scrollL();
+  $('game-log').appendChild(el);
+  lb.innerHTML=renderMarkdown(stripStatTags(text));
 }
 function addSys(text){
   const el=document.createElement('div');el.className='le-s';
   el.innerHTML=`<div class="lb">${esc(text)}</div>`;
-  $('game-log').appendChild(el);scrollL();
+  $('game-log').appendChild(el);
 }
 function addTy(){
   const el=document.createElement('div');el.className='le-d';
   el.innerHTML=`<div class="ll">Narrator</div><div class="ty"><div class="td"></div><div class="td"></div><div class="td"></div></div>`;
-  $('game-log').appendChild(el);scrollL();return el;
+  $('game-log').appendChild(el);return el;
 }
 function scrollL(){const l=$('game-log');l.scrollTop=l.scrollHeight;}
 
