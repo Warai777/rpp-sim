@@ -1,0 +1,4 @@
+{
+  "buildCommand": "mkdir -p dist && node build.js",
+  "outputDirectory": "dist"
+}
