@@ -884,7 +884,14 @@ async function enterWorld(wid,opening=false){
     if(opening){addSys('The world takes shape…');await genOpening(world,gs,ps);}
     else{
       const hist=await sbG('conversation_history',`world_id=eq.${wid}&select=role,content&order=created_at.asc&limit=60`);
-      if(hist?.length){$('game-log').innerHTML='';hist.forEach(m=>m.role==='user'?addP(m.content,false):addD(m.content,false,false));scrollL();}
+      if(hist?.length){
+        $('game-log').innerHTML='';
+        hist.forEach(m=>m.role==='user'?addP(m.content,false):addD(m.content,false,false));
+        // Regenerate options from the last DM message
+        const lastDM=[...hist].reverse().find(m=>m.role==='assistant');
+        const lastPlayer=[...hist].reverse().find(m=>m.role==='user');
+        if(lastDM) genOptions(lastDM.content, world, lastPlayer?.content||'');
+      }
       else addSys('Your adventure continues…');
     }
   }catch(e){addSys('Error: '+e.message);}
