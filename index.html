@@ -343,7 +343,7 @@
     <div class="mh">
       <div>
         <div style="font-size:15px;font-weight:600;">🛒 Universal Shop</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px;">Items priced in <span id="shop-currency">your world's currency</span> · Canon-accurate stock</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">Priced in <span id="shop-currency">world currency</span> · Items from any universe</div>
       </div>
       <button class="btn btn-ico btn-sm" onclick="closeShop()">✕</button>
     </div>
@@ -796,27 +796,27 @@ async function searchShop(){
   try{
     const gs=curGS,ps=curPS;
     const [world]=await sbG('worlds',`id=eq.${curWorldId}&select=world_name,genre`);
-    // Currency: try notes first, then derive from world name
+    // Currency: try notes first, then derive from world name + genre
     const curM=ps?.notes?.match(/CUR:([^|$\n]+)/);
     let curName=curM?curM[1].trim():'';
     if(!curName){
-      // Derive from world name if not stored
-      const wn=(world?.world_name||'').toLowerCase();
+      const wn=((world?.world_name||'')+' '+(world?.genre||'')).toLowerCase();
       if(wn.includes('one piece')||wn.includes('pirate')) curName='Berries';
-      else if(wn.includes('naruto')||wn.includes('ninja')) curName='Ryo';
-      else if(wn.includes('dragon ball')||wn.includes('dbz')) curName='Zeni';
-      else if(wn.includes('bleach')) curName='Kan';
-      else if(wn.includes('solo leveling')||wn.includes('hunter')) curName='Gold';
-      else if(wn.includes('attack on titan')||wn.includes('aot')) curName='Eldian Marks';
+      else if(wn.includes('naruto')||wn.includes('shinobi')) curName='Ryo';
+      else if(wn.includes('dragon ball')) curName='Zeni';
+      else if(wn.includes('bleach')||wn.includes('soul society')) curName='Kan';
+      else if(wn.includes('attack on titan')) curName='Eldian Marks';
       else if(wn.includes('cyberpunk')) curName='Eddies';
       else if(wn.includes('witcher')) curName='Crowns';
       else if(wn.includes('mistborn')) curName='Clips';
-      else if(wn.includes('elder ring')||wn.includes('elden')) curName='Runes';
+      else if(wn.includes('elden ring')) curName='Runes';
       else if(wn.includes('dark souls')) curName='Souls';
       else if(wn.includes('final fantasy')) curName='Gil';
+      else if(wn.includes('jujutsu')||wn.includes('kaisen')) curName='Yen';
+      else if(wn.includes('demon slayer')||wn.includes('taisho')) curName='Mon';
+      else if(wn.includes('solo leveling')) curName='Won';
       else curName='Gold';
     }
-    // Update shop header label
     $('shop-currency').textContent=curName;
     const raw=await callAI(
 `You are the Universal Shop proprietor. List 1-3 items matching the search.
@@ -827,7 +827,7 @@ Rules:
 - SHORT_DESCRIPTION: one sentence, under 100 chars, no pipe characters
 - PRICE_NUMBER: integer only, no symbols. Scale: weak=100-5000, mid=5000-100000, strong=100000-1000000, godlike=1000000+
 - Pricing based on player level (${ps?.current_level||'unknown'}) and tier (${curVSB.tier||'unknown'})
-- yes_or_no_canon: "yes" if item exists in source canon, "no" if invented
+- yes_or_no_canon: "yes" if the item genuinely exists in its source fiction (even if from another universe than the player). "no" only for completely made-up items with no fictional source.
 - Currency is ${curName}
 - No extra text, no headers, just the pipe-separated lines`,
       [{role:'user',content:`Search: ${q}\nWorld: ${world?.world_name||'unknown'}\nBalance: ${gs?.berry||0} ${curName}`}],600);
@@ -837,7 +837,7 @@ Rules:
     shopItems=items;
     $('shop-results').innerHTML=items.map((item,i)=>`
       <div class="shop-item">
-        <div class="shop-item-name">${esc(item.name)} ${!item.canon_accurate?'<span style="font-size:10px;color:var(--amber);background:rgba(212,148,74,.15);padding:1px 6px;border-radius:3px;">Non-canon</span>':''}</div>
+        <div class="shop-item-name">${esc(item.name)} ${!item.canon_accurate?'<span style="font-size:10px;color:var(--amber);background:rgba(212,148,74,.15);padding:1px 6px;border-radius:3px;">Fan-made</span>':item.canon_source&&item.canon_source!==world?.world_name?'<span style="font-size:10px;color:var(--cyan);background:rgba(74,184,212,.1);padding:1px 6px;border-radius:3px;">Cross-world</span>':''}</div>
         <div style="font-size:11px;color:var(--accent);margin-bottom:6px;">From: ${esc(item.canon_source)}</div>
         <div class="shop-item-desc">${esc(item.description)}</div>
         <div class="shop-item-footer">
