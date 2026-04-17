@@ -1012,7 +1012,7 @@ async function sendAction(text){
 
     const fetches=[
       cachedWorld ? Promise.resolve([[cachedWorld]]) : sbG('worlds',`id=eq.${curWorldId}&select=*`).then(r=>{cachedWorld=r[0];return [r];}),
-      sbG('conversation_history',`world_id=eq.${curWorldId}&select=role,content&order=created_at.desc&limit=10`),
+      sbG('conversation_history',`world_id=eq.${curWorldId}&select=role,content&order=created_at.desc&limit=20`),
       cachedOrders !== null ? Promise.resolve(cachedOrders) : sbG('standing_orders',`world_id=eq.${curWorldId}&select=rule_text,category`).then(r=>{cachedOrders=r;return r;}),
       sbG('inventory',`world_id=eq.${curWorldId}&select=*`), // always fetch inventory
       na ? sbG('allies',`world_id=eq.${curWorldId}&select=*`) : Promise.resolve(null),
@@ -1135,6 +1135,13 @@ STRICT IMMERSION — CRITICAL:
 - Canon characters in the world exist as they are at this point in the story — do not reference their future actions or destiny.
 - If Zoro is tied to a post, he is tied to a post. He is not "waiting for someone." He does not know anyone is coming. Narrate only what is observable.
 - The player character discovers the world through play, not through narrator omniscience.
+CONTINUITY — CRITICAL:
+- Read the full conversation history before every response. The story must continue from exactly where it left off.
+- NEVER reset a scene, re-introduce a character the player has already met, or repeat information already established.
+- If the player already spoke to Zoro, Zoro knows the player exists. Do not describe meeting him again.
+- If the player is already tied up in the courtyard, they are still tied up. Do not move them back to the street.
+- Track what has happened and what has been said. Build forward, never backward.
+- If a character said something 3 turns ago, they said it. It happened. Continue from that reality.
 ARC TRANSITIONS: When the story naturally moves into a new arc or saga, include [NEW_ARC: arc name] in your response. The system will automatically search and load that arc's canon details. Only use this when a major story transition actually occurs — not every scene.
 [REMEMBER: fact] — saves a key fact to permanent memory (use for: deals made, secrets learned, enemies identified, important NPCs met, locations discovered, obligations taken on). Keep the fact short and clear. Only use when genuinely important — not every turn. Examples: [REMEMBER: Made a deal with Coby to stay quiet about the Marine patrol] [REMEMBER: Zoro is being held at the Marine base on the east road] [REMEMBER: Luffy offered to let you join his crew]`);
 
