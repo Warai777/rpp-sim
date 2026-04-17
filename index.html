@@ -1090,10 +1090,12 @@ async function genOptions(dmText, world, playerAction=''){
     // Extract last thing said/asked in the scene for better context
     const lastDialogue=dmText.match(/"([^"]{10,100})"\s*(?:he|she|they|it)?\s*(?:says?|asks?|said|asked)?[^"]*$/i)?.[1]||'';
     const raw=await callAI(
-`You generate 3 contextual action options for a text RPG player. Return ONLY a raw JSON array of exactly 3 strings.
-The options must be DIRECTLY relevant to the immediate situation — if a character just asked a question, at least 2 options should be responses to that question. If the player is in a conversation, options should reflect conversational choices. If in combat, combat choices. Always match the exact moment.
-Keep each option under 12 words. Vary tone — one direct, one cautious, one unexpected. No numbering.`,
-      [{role:'user',content:`World: ${world.world_name}\nPlayer just did: ${playerAction}\nScene ending: ${dmText.slice(-400)}\nLast dialogue heard: ${lastDialogue||'none'}\nLocation: ${gs?.current_location||'unknown'}`}],400);
+`You generate 3 action options for a text RPG player. Return ONLY a raw JSON array of exactly 3 strings.
+CRITICAL: The options are for THE PLAYER CHARACTER — what THEY say or do next. Never write options from another character's perspective.
+If someone asked the player a question, the options are the player's possible RESPONSES to that question.
+If the player is in a conversation, options are things THE PLAYER says or does — not what the other character does.
+Keep each under 12 words. Vary tone — one direct, one cautious, one unexpected. No numbering. No quotation marks unless it's dialogue.`,
+      [{role:'user',content:`World: ${world.world_name}\nPlayer character just did: ${playerAction}\nScene ending (what just happened): ${dmText.slice(-400)}\nLast dialogue heard: ${lastDialogue||'none'}\nPlayer location: ${gs?.current_location||'unknown'}`}],400);
     const opts=JSON.parse(raw.replace(/```json|```/g,'').trim());
     if(!Array.isArray(opts)||opts.length<1)return;
     ao.innerHTML='';
