@@ -850,54 +850,32 @@ async function createAndBegin(){
   const {api}=cfg();if(!api){toast('Add your API key in Settings','err');openSettings();return;}
   const btn=$('begin-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Building world…';
   try{
-    // Step 1: Detect starting arc
-    btn.innerHTML='<span class="spin"></span> Detecting story arc…';
-    const arcRaw=await callAI(`Determine which story arc this character starts in. Return ONLY raw JSON:
-{"arc_name":"...","arc_query":"..."}
-arc_name: Specific arc name (e.g. "Romance Dawn Arc", "East Blue Saga - Shells Town", "Chunin Exams Arc")
-arc_query: Focused search query for this arc (e.g. "One Piece Romance Dawn Arc Foosha Village wiki characters events")`,
-      [{role:'user',content:`World: ${selWorld.name}\nBackstory: ${back||'none'}\nLore: ${selWorld.lore?.slice(0,200)||''}`}], 250);
-
-    let arcName='Opening Arc';
-    let arcQuery=`${selWorld.name} first arc characters locations wiki`;
-    try{const a=JSON.parse(arcRaw.replace(/```json|```/g,'').trim());arcName=a.arc_name||arcName;arcQuery=a.arc_query||arcQuery;}catch(_){}
-
-    // Step 2: Search specifically for this arc
-    btn.innerHTML=`<span class="spin"></span> Loading ${arcName}…`;
+    // Step 1: Single combined search — detect arc and load its details in one call
+    btn.innerHTML='<span class="spin"></span> Loading world lore…';
     const searchRes=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':api,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
-        max_tokens:1200,
+        max_tokens:1000,
         tools:[{type:'web_search_20250305',name:'web_search'}],
-        system:`You are a canon researcher for a text RPG. Search for details about a SPECIFIC arc only. Return ONLY raw JSON:
-{"confidence":"high|medium|low|none","arc_name":"...","canon_details":"..."}
-canon_details: Arc-specific facts only — characters present in this arc (name/gender/abilities), locations, key events, enemies/allies, how this arc begins and ends. 2-3 paragraphs max. Do not include info from other arcs.`,
-        messages:[{role:'user',content:`Search: ${arcQuery}\nExtract arc-specific details only. Return the JSON.`}]
+        system:`Search for the starting arc of a fictional world for a text RPG player. Do ONE search only. Return ONLY raw JSON:
+{"arc_name":"...","canon_details":"..."}
+arc_name: The specific starting arc/saga name.
+canon_details: 2 paragraphs max — characters in this arc (name/gender/key ability), locations, how arc begins. Be concise.`,
+        messages:[{role:'user',content:`Search: "${selWorld.name} first arc characters wiki"\nCharacter backstory: ${back||'newcomer'}\nReturn the JSON.`}]
       })
     });
     const searchData=await searchRes.json();
     if(!searchRes.ok) throw new Error(searchData.error?.message||'Search failed');
-
     const allText=searchData.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n')||'';
-    let canonCheck={confidence:'medium',arc_name:arcName,canon_details:''};
-    const jsonMatch=allText.match(/\{[\s\S]*"confidence"[\s\S]*\}/);
-    if(jsonMatch){try{canonCheck=JSON.parse(jsonMatch[0]);}catch(_){}}
-    if(!canonCheck.canon_details&&allText.length>100){
-      canonCheck.confidence='medium';
-      canonCheck.canon_details=allText.replace(/```json|```|\{[\s\S]*\}/g,'').trim().slice(0,2000);
-    }
-    const detectedArc=canonCheck.arc_name||arcName;
-
-    if(!canonCheck.canon_details&&allText.length<50){
-      const proceed=confirm(`⚠ No arc data found for "${selWorld.name}".\nThe DM may invent details. Continue anyway?`);
-      if(!proceed){btn.disabled=false;btn.innerHTML='Begin Adventure ↵';return;}
-    } else {
-      toast(`✓ ${detectedArc} loaded`,'ok');
-    }
-
-    const arcCtx=`CURRENT ARC: ${detectedArc}\n${canonCheck.canon_details}`;
+    let arcName='Opening Arc', arcDetails='';
+    const jm=allText.match(/\{[\s\S]*"arc_name"[\s\S]*\}/);
+    if(jm){try{const p=JSON.parse(jm[0]);arcName=p.arc_name||arcName;arcDetails=p.canon_details||'';}catch(_){}}
+    if(!arcDetails&&allText.length>100) arcDetails=allText.replace(/```json|```|\{[\s\S]*\}/g,'').trim().slice(0,1500);
+    const detectedArc=arcName;
+    if(arcDetails) toast(`✓ ${detectedArc} loaded`,'ok');
+    const arcCtx=`CURRENT ARC: ${detectedArc}\n${arcDetails}`;
 
     // Step 2: Generate DM prompt with canon details injected
     btn.innerHTML='<span class="spin"></span> Building world…';
