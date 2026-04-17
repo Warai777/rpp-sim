@@ -880,17 +880,30 @@ Read every useful page you find. Extract everything: character names with exact 
       })
     });
     const searchData=await searchRes.json();
-    // Extract text from response — may include tool use blocks
-    const searchText=searchData.content?.filter(b=>b.type==='text').map(b=>b.text).join('')||'{}';
-    let canonCheck={confidence:'low',canon_details:'',warning:'Limited information found online.'};
-    try{canonCheck=JSON.parse(searchText.replace(/```json|```/g,'').trim());}catch(_){}
+    if(!searchRes.ok) throw new Error(searchData.error?.message||'Search failed');
 
-    // Show warning if low confidence even after web search
-    if(canonCheck.confidence==='low'||canonCheck.confidence==='none'){
-      const proceed=confirm(`⚠ Canon Warning\n\n"${selWorld.name}" — ${canonCheck.confidence==='none'?'no information found online':'limited information found online'}.\n\n${canonCheck.warning||'The DM may invent details not accurate to the source.'}\n\nContinue anyway?`);
+    // Extract all text content — the AI may return tool_use blocks before the final text
+    const allText=searchData.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n')||'';
+
+    let canonCheck={confidence:'medium',canon_details:'',warning:''};
+    // Try to parse JSON from the response
+    const jsonMatch=allText.match(/\{[\s\S]*"confidence"[\s\S]*\}/);
+    if(jsonMatch){
+      try{canonCheck=JSON.parse(jsonMatch[0]);}catch(_){}
+    }
+
+    // If parsing failed but we got text back, extract canon details from the raw text
+    if(!canonCheck.canon_details && allText.length>100){
+      canonCheck.confidence='medium';
+      canonCheck.canon_details=allText.replace(/```json|```|\{[\s\S]*\}/g,'').trim().slice(0,3000);
+    }
+
+    // Only warn if truly nothing was found
+    if(canonCheck.confidence==='none'||(!canonCheck.canon_details&&allText.length<50)){
+      const proceed=confirm(`⚠ Canon Warning\n\n"${selWorld.name}" — no information found online.\n\nThe DM may invent details not accurate to the source.\n\nContinue anyway?`);
       if(!proceed){btn.disabled=false;btn.innerHTML='Begin Adventure ↵';return;}
     } else {
-      toast(`Canon loaded — ${canonCheck.confidence} confidence`,'ok');
+      toast(`✓ Canon data loaded for ${selWorld.name}`,'ok');
     }
 
     // Step 2: Generate DM prompt with canon details injected
