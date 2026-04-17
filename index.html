@@ -850,61 +850,54 @@ async function createAndBegin(){
   const {api}=cfg();if(!api){toast('Add your API key in Settings','err');openSettings();return;}
   const btn=$('begin-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Building world…';
   try{
-    // Step 1: Web search for canon details
-    btn.innerHTML='<span class="spin"></span> Researching world lore…';
+    // Step 1: Detect starting arc
+    btn.innerHTML='<span class="spin"></span> Detecting story arc…';
+    const arcRaw=await callAI(`Determine which story arc this character starts in. Return ONLY raw JSON:
+{"arc_name":"...","arc_query":"..."}
+arc_name: Specific arc name (e.g. "Romance Dawn Arc", "East Blue Saga - Shells Town", "Chunin Exams Arc")
+arc_query: Focused search query for this arc (e.g. "One Piece Romance Dawn Arc Foosha Village wiki characters events")`,
+      [{role:'user',content:`World: ${selWorld.name}\nBackstory: ${back||'none'}\nLore: ${selWorld.lore?.slice(0,200)||''}`}], 250);
+
+    let arcName='Opening Arc';
+    let arcQuery=`${selWorld.name} first arc characters locations wiki`;
+    try{const a=JSON.parse(arcRaw.replace(/```json|```/g,'').trim());arcName=a.arc_name||arcName;arcQuery=a.arc_query||arcQuery;}catch(_){}
+
+    // Step 2: Search specifically for this arc
+    btn.innerHTML=`<span class="spin"></span> Loading ${arcName}…`;
     const searchRes=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':api,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
-        max_tokens:2500,
+        max_tokens:1200,
         tools:[{type:'web_search_20250305',name:'web_search'}],
-        system:`You are a canon researcher for a text RPG. Search the web for accurate information about this fictional world. After searching, return ONLY raw JSON (no markdown):
-{"confidence":"high|medium|low|none","canon_details":"...","warning":""}
-confidence: high=detailed accurate info found, medium=partial info found, low=very little found, none=nothing found.
-canon_details: Comprehensive paragraph of canon facts extracted from search: main characters with genders/ages/abilities, power system rules, key locations, factions, story arcs, important canon events. Be specific and accurate. Empty string if nothing found.
-warning: Short warning if confidence is low/none. Empty string otherwise.`,
-        messages:[{role:'user',content:`You need to build a comprehensive canon reference for the fiction: "${selWorld.name}" (${selWorld.genre}).
-
-Search aggressively across ALL of these sources — search multiple times if needed:
-- "${selWorld.name} wiki fandom" — character pages, abilities, power systems
-- "${selWorld.name} vsbattles wiki" — power scaling, abilities breakdown
-- "${selWorld.name} novelfire" OR "${selWorld.name} webnovel" OR "${selWorld.name} novelupdates" — plot, chapters, synopsis
-- "${selWorld.name} reddit" — fan discussions, power scaling debates, lore explanations  
-- "${selWorld.name} myanimelist" OR "${selWorld.name} anilist" — series info, synopsis
-- "${selWorld.name} characters list abilities" — any character databases
-- "${selWorld.name} power system explained" — dedicated lore/power breakdowns
-- "${selWorld.name} plot summary" — any comprehensive summaries
-
-Read every useful page you find. Extract everything: character names with exact genders/ages/personalities/abilities, the complete power system with all levels/stages/ranks, key locations, factions and their relationships, major story arcs, world rules and physics, important canon events. The more detail the better — this becomes the DM's authoritative reference. Then return the JSON.`}]
+        system:`You are a canon researcher for a text RPG. Search for details about a SPECIFIC arc only. Return ONLY raw JSON:
+{"confidence":"high|medium|low|none","arc_name":"...","canon_details":"..."}
+canon_details: Arc-specific facts only — characters present in this arc (name/gender/abilities), locations, key events, enemies/allies, how this arc begins and ends. 2-3 paragraphs max. Do not include info from other arcs.`,
+        messages:[{role:'user',content:`Search: ${arcQuery}\nExtract arc-specific details only. Return the JSON.`}]
       })
     });
     const searchData=await searchRes.json();
     if(!searchRes.ok) throw new Error(searchData.error?.message||'Search failed');
 
-    // Extract all text content — the AI may return tool_use blocks before the final text
     const allText=searchData.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n')||'';
-
-    let canonCheck={confidence:'medium',canon_details:'',warning:''};
-    // Try to parse JSON from the response
+    let canonCheck={confidence:'medium',arc_name:arcName,canon_details:''};
     const jsonMatch=allText.match(/\{[\s\S]*"confidence"[\s\S]*\}/);
-    if(jsonMatch){
-      try{canonCheck=JSON.parse(jsonMatch[0]);}catch(_){}
-    }
-
-    // If parsing failed but we got text back, extract canon details from the raw text
-    if(!canonCheck.canon_details && allText.length>100){
+    if(jsonMatch){try{canonCheck=JSON.parse(jsonMatch[0]);}catch(_){}}
+    if(!canonCheck.canon_details&&allText.length>100){
       canonCheck.confidence='medium';
-      canonCheck.canon_details=allText.replace(/```json|```|\{[\s\S]*\}/g,'').trim().slice(0,3000);
+      canonCheck.canon_details=allText.replace(/```json|```|\{[\s\S]*\}/g,'').trim().slice(0,2000);
     }
+    const detectedArc=canonCheck.arc_name||arcName;
 
-    // Only warn if truly nothing was found
-    if(canonCheck.confidence==='none'||(!canonCheck.canon_details&&allText.length<50)){
-      const proceed=confirm(`⚠ Canon Warning\n\n"${selWorld.name}" — no information found online.\n\nThe DM may invent details not accurate to the source.\n\nContinue anyway?`);
+    if(!canonCheck.canon_details&&allText.length<50){
+      const proceed=confirm(`⚠ No arc data found for "${selWorld.name}".\nThe DM may invent details. Continue anyway?`);
       if(!proceed){btn.disabled=false;btn.innerHTML='Begin Adventure ↵';return;}
     } else {
-      toast(`✓ Canon data loaded for ${selWorld.name}`,'ok');
+      toast(`✓ ${detectedArc} loaded`,'ok');
     }
+
+    const arcCtx=`CURRENT ARC: ${detectedArc}\n${canonCheck.canon_details}`;
 
     // Step 2: Generate DM prompt with canon details injected
     btn.innerHTML='<span class="spin"></span> Building world…';
@@ -919,7 +912,7 @@ starting_time: One of Dawn/Morning/Afternoon/Evening/Night.
 currency_name: The actual in-world currency (e.g. Berries, Ryo, Zeni).
 starting_currency: INTEGER based on character backstory. homeless=0, poor=10-50, commoner=100-500, skilled=2000-10000, wealthy=10000+.
 starting_hp: INTEGER based on physical description. Average=100, athletic=120-150, sickly=50-80, exceptional=150-200.`,
-      [{role:'user',content:`World: ${selWorld.name}\nGenre: ${selWorld.genre}\nCANON REFERENCE: ${canonCheck.canon_details||selWorld.lore||'Use best available knowledge'}\nCharacter: ${name}\nAppearance: ${app||'Not described'}\nBackstory: ${back||'Unknown past'}\nPersonality: ${pers||'Not described'}`}], 1200);
+      [{role:'user',content:`World: ${selWorld.name}\nGenre: ${selWorld.genre}\nCANON REFERENCE: ${arcCtx||selWorld.lore||'Use best available knowledge'}\nCharacter: ${name}\nAppearance: ${app||'Not described'}\nBackstory: ${back||'Unknown past'}\nPersonality: ${pers||'Not described'}`}], 1200);
 
     const gen=JSON.parse(raw.replace(/```json|```/g,'').trim());
     const dmPr=gen.dm_prompt||`You are the DM of ${selWorld.name}. Narrate in second person. Character: ${name}. Embed stat changes using provided tags.`;
@@ -932,7 +925,7 @@ starting_hp: INTEGER based on physical description. Average=100, athletic=120-15
     const [world]=await sbP('worlds',{world_name:selWorld.name,genre:selWorld.genre,dm_system_prompt:dmPr,canon_rules:fullCanon,user_id:currentUser?.id||null});
     const wid=world.id;
     await sbP('game_state',{world_id:wid,hp:startingHp,berry:startingCurrency,power_stage:'Unknown',current_day:1,current_location:gen.starting_location||selWorld.name,current_time_of_day:gen.starting_time||'Morning'});
-    await sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}|CUR:${gen.currency_name||'Gold'}`});
+    await sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}|CUR:${gen.currency_name||'Gold'}|ARC:${detectedArc}`});
     toast('World created!','ok');enterWorld(wid,true);
   }catch(e){toast(e.message,'err');btn.disabled=false;btn.innerHTML='Begin Adventure ↵';}
 }
@@ -1164,7 +1157,7 @@ STRICT IMMERSION — CRITICAL:
 - Canon characters in the world exist as they are at this point in the story — do not reference their future actions or destiny.
 - If Zoro is tied to a post, he is tied to a post. He is not "waiting for someone." He does not know anyone is coming. Narrate only what is observable.
 - The player character discovers the world through play, not through narrator omniscience.
-MEMORY TAGS — use these when something important should be remembered long-term:
+ARC TRANSITIONS: When the story naturally moves into a new arc or saga, include [NEW_ARC: arc name] in your response. The system will automatically search and load that arc's canon details. Only use this when a major story transition actually occurs — not every scene.
 [REMEMBER: fact] — saves a key fact to permanent memory (use for: deals made, secrets learned, enemies identified, important NPCs met, locations discovered, obligations taken on). Keep the fact short and clear. Only use when genuinely important — not every turn. Examples: [REMEMBER: Made a deal with Coby to stay quiet about the Marine patrol] [REMEMBER: Zoro is being held at the Marine base on the east road] [REMEMBER: Luffy offered to let you join his crew]`);
 
   return p.join('\n');
@@ -1190,6 +1183,44 @@ async function parseStats(text){
     if(tier)curVSB.tier=tier;if(atk)curVSB.attack_potency=atk;if(spd)curVSB.speed=spd;if(dur)curVSB.durability=dur;if(int)curVSB.intelligence=int;if(pows)curVSB.powers=pows;
     updateSB();
   }
+  // Arc transition detection
+  const newArc=m(/\[NEW_ARC:\s*([^\]]+)\]/i);
+  if(newArc) loadNewArc(newArc);
+}
+
+async function loadNewArc(arcName){
+  if(!curWorldId||!arcName) return;
+  try{
+    const {api}=cfg();
+    const [world]=await sbG('worlds',`id=eq.${curWorldId}&select=world_name`);
+    toast(`📖 Loading ${arcName}…`,'ok');
+    const searchRes=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':api,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',max_tokens:1200,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        system:`Search for details about a specific story arc for a text RPG. Return ONLY raw JSON: {"canon_details":"..."}
+canon_details: Characters in this arc (name/gender/abilities), locations, key events, enemies, how arc begins. 2-3 paragraphs. Arc-specific only.`,
+        messages:[{role:'user',content:`Search: "${world?.world_name} ${arcName} wiki characters events locations"\nReturn the JSON.`}]
+      })
+    });
+    const d=await searchRes.json();
+    const txt=d.content?.filter(b=>b.type==='text').map(b=>b.text).join('')||'';
+    const jm=txt.match(/\{[\s\S]*"canon_details"[\s\S]*\}/);
+    let details='';
+    if(jm){try{details=JSON.parse(jm[0]).canon_details||'';}catch(_){}}
+    if(!details&&txt.length>100) details=txt.replace(/```json|```|\{[\s\S]*\}/g,'').trim().slice(0,2000);
+    if(details){
+      // Update canon_rules with new arc info
+      const [currentWorld]=await sbG('worlds',`id=eq.${curWorldId}&select=canon_rules`);
+      const newCanon=`CURRENT ARC: ${arcName}\n${details}`;
+      await sbPa('worlds',`id=eq.${curWorldId}`,{canon_rules:newCanon});
+      cachedWorld=null; // force refresh next turn
+      toast(`✓ ${arcName} loaded`,'ok');
+      addSys(`📖 Arc transition: ${arcName}`);
+    }
+  }catch(e){console.error('Arc load error:',e);}
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
