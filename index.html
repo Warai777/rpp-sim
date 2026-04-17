@@ -850,24 +850,73 @@ async function createAndBegin(){
   const {api}=cfg();if(!api){toast('Add your API key in Settings','err');openSettings();return;}
   const btn=$('begin-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Building world…';
   try{
-    const raw=await callAI(`Generate a DM system prompt and world config for a text RPG. Return ONLY raw JSON (no markdown):
-{"dm_prompt":"...","canon_rules":"...","starting_location":"...","starting_time":"Morning","currency_name":"..."}
+    // Step 1: Web search for canon details
+    btn.innerHTML='<span class="spin"></span> Researching world lore…';
+    const searchRes=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':api,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:2500,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        system:`You are a canon researcher for a text RPG. Search the web for accurate information about this fictional world. After searching, return ONLY raw JSON (no markdown):
+{"confidence":"high|medium|low|none","canon_details":"...","warning":""}
+confidence: high=detailed accurate info found, medium=partial info found, low=very little found, none=nothing found.
+canon_details: Comprehensive paragraph of canon facts extracted from search: main characters with genders/ages/abilities, power system rules, key locations, factions, story arcs, important canon events. Be specific and accurate. Empty string if nothing found.
+warning: Short warning if confidence is low/none. Empty string otherwise.`,
+        messages:[{role:'user',content:`You need to build a comprehensive canon reference for the fiction: "${selWorld.name}" (${selWorld.genre}).
 
-dm_prompt (~350 words): Rich narrator persona. Second-person narration. Vivid scene-setting. Faithful to world lore. Use VS Battles wiki terminology for power levels — Tier, Attack Potency, Speed, Durability, Intelligence classifications. Power systems ONLY discovered through play. Universal Shop exists outside reality — rare access moments only. Stat tags when values change: [HP: X] [BERRY: X] [DAY: N] [LOCATION: name] [TIME: name] [STAGE: text] [POWER_SYSTEM: name] [POWER_LEVEL: level] [TIER: text] [ATK: text] [SPD: text] [DUR: text] [INT: text]. Track consequences. Maintain world tone.
-CRITICAL: NEVER write choice menus, option lists, [A]/[B]/[C] choices, "Your options are:", or any kind of numbered/lettered action list in responses. The interface handles choices automatically. Just narrate the scene and end on tension or an open moment. The player decides what to do.
-STRICT IMMERSION: Only narrate what the player character can directly observe right now. NEVER reference future plot events, future character actions, or story outcomes the player hasn't discovered yet. NEVER reveal other characters' private thoughts or plans. NEVER get canon facts wrong — gender, names, abilities must be exact. Characters only know what they currently know in the story — no prophecy, no destiny spoilers, no omniscient narrator leaks.
-canon_rules: Short paragraph of 3-5 core world physics/rules.
-starting_location: Single evocative place name fitting this world and character backstory.
+Search aggressively across ALL of these sources — search multiple times if needed:
+- "${selWorld.name} wiki fandom" — character pages, abilities, power systems
+- "${selWorld.name} vsbattles wiki" — power scaling, abilities breakdown
+- "${selWorld.name} novelfire" OR "${selWorld.name} webnovel" OR "${selWorld.name} novelupdates" — plot, chapters, synopsis
+- "${selWorld.name} reddit" — fan discussions, power scaling debates, lore explanations  
+- "${selWorld.name} myanimelist" OR "${selWorld.name} anilist" — series info, synopsis
+- "${selWorld.name} characters list abilities" — any character databases
+- "${selWorld.name} power system explained" — dedicated lore/power breakdowns
+- "${selWorld.name} plot summary" — any comprehensive summaries
+
+Read every useful page you find. Extract everything: character names with exact genders/ages/personalities/abilities, the complete power system with all levels/stages/ranks, key locations, factions and their relationships, major story arcs, world rules and physics, important canon events. The more detail the better — this becomes the DM's authoritative reference. Then return the JSON.`}]
+      })
+    });
+    const searchData=await searchRes.json();
+    // Extract text from response — may include tool use blocks
+    const searchText=searchData.content?.filter(b=>b.type==='text').map(b=>b.text).join('')||'{}';
+    let canonCheck={confidence:'low',canon_details:'',warning:'Limited information found online.'};
+    try{canonCheck=JSON.parse(searchText.replace(/```json|```/g,'').trim());}catch(_){}
+
+    // Show warning if low confidence even after web search
+    if(canonCheck.confidence==='low'||canonCheck.confidence==='none'){
+      const proceed=confirm(`⚠ Canon Warning\n\n"${selWorld.name}" — ${canonCheck.confidence==='none'?'no information found online':'limited information found online'}.\n\n${canonCheck.warning||'The DM may invent details not accurate to the source.'}\n\nContinue anyway?`);
+      if(!proceed){btn.disabled=false;btn.innerHTML='Begin Adventure ↵';return;}
+    } else {
+      toast(`Canon loaded — ${canonCheck.confidence} confidence`,'ok');
+    }
+
+    // Step 2: Generate DM prompt with canon details injected
+    btn.innerHTML='<span class="spin"></span> Building world…';
+    const raw=await callAI(`Generate a DM system prompt and world config for a text RPG. Return ONLY raw JSON (no markdown):
+{"dm_prompt":"...","canon_rules":"...","starting_location":"...","starting_time":"Morning","currency_name":"...","starting_currency":100,"starting_hp":100}
+
+dm_prompt (~350 words): Rich narrator persona. Second-person narration. Vivid scene-setting. Faithful to world lore — use the CANON REFERENCE provided to stay accurate. Use VS Battles wiki terminology for power levels. Power systems ONLY discovered through play. Universal Shop exists outside reality — rare access moments only. Stat tags when values change: [HP: X] [BERRY: X] [DAY: N] [LOCATION: name] [TIME: name] [STAGE: text] [POWER_SYSTEM: name] [POWER_LEVEL: level] [TIER: text] [ATK: text] [SPD: text] [DUR: text] [INT: text]. Track consequences. Maintain world tone.
+CRITICAL: NEVER write choice menus, option lists, [A]/[B]/[C] choices, "Your options are:", or any kind of numbered/lettered action list. NEVER reference future plot events. NEVER get character facts wrong. NEVER invent abilities or characters that don't exist in canon.
+canon_rules: 3-5 core world physics/rules drawn from the canon reference.
+starting_location: Single evocative canon location fitting this world and character backstory.
 starting_time: One of Dawn/Morning/Afternoon/Evening/Night.
-currency_name: The in-world currency name (e.g. Berries, Ryo, Zeni, Gold, Credits).
-starting_currency: INTEGER. The amount of currency the character realistically starts with based on their backstory and social standing. Examples: homeless/destitute=0, poor street person=10-50, average commoner=100-500, working class with job=500-2000, skilled professional=2000-10000, wealthy merchant=10000-100000, nobility/royalty=100000+. Base this ENTIRELY on the character's described backstory and personality. If no backstory given, default to 100.
-starting_hp: INTEGER. Starting HP based on character's physical condition described in backstory/appearance. Healthy average person=100, athlete/fighter=120-150, sickly/injured=50-80, exceptional physical specimen=150-200.`,
-      [{role:'user',content:`World: ${selWorld.name}\nGenre: ${selWorld.genre}\nLore: ${selWorld.lore||'Generate fitting lore'}\nCharacter: ${name}\nAppearance: ${app||'Not described'}\nBackstory: ${back||'Unknown past'}\nPersonality: ${pers||'Not described'}`}]);
+currency_name: The actual in-world currency (e.g. Berries, Ryo, Zeni).
+starting_currency: INTEGER based on character backstory. homeless=0, poor=10-50, commoner=100-500, skilled=2000-10000, wealthy=10000+.
+starting_hp: INTEGER based on physical description. Average=100, athletic=120-150, sickly=50-80, exceptional=150-200.`,
+      [{role:'user',content:`World: ${selWorld.name}\nGenre: ${selWorld.genre}\nCANON REFERENCE: ${canonCheck.canon_details||selWorld.lore||'Use best available knowledge'}\nCharacter: ${name}\nAppearance: ${app||'Not described'}\nBackstory: ${back||'Unknown past'}\nPersonality: ${pers||'Not described'}`}], 1200);
+
     const gen=JSON.parse(raw.replace(/```json|```/g,'').trim());
     const dmPr=gen.dm_prompt||`You are the DM of ${selWorld.name}. Narrate in second person. Character: ${name}. Embed stat changes using provided tags.`;
     const startingCurrency=parseInt(gen.starting_currency)||100;
     const startingHp=parseInt(gen.starting_hp)||100;
-    const [world]=await sbP('worlds',{world_name:selWorld.name,genre:selWorld.genre,dm_system_prompt:dmPr,canon_rules:gen.canon_rules||'',user_id:currentUser?.id||null});
+
+    // Store canon details in canon_rules for use every turn
+    const fullCanon=(gen.canon_rules||'')+(canonCheck.canon_details?'\n\nCANON REFERENCE:\n'+canonCheck.canon_details:'');
+
+    const [world]=await sbP('worlds',{world_name:selWorld.name,genre:selWorld.genre,dm_system_prompt:dmPr,canon_rules:fullCanon,user_id:currentUser?.id||null});
     const wid=world.id;
     await sbP('game_state',{world_id:wid,hp:startingHp,berry:startingCurrency,power_stage:'Unknown',current_day:1,current_location:gen.starting_location||selWorld.name,current_time_of_day:gen.starting_time||'Morning'});
     await sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}|CUR:${gen.currency_name||'Gold'}`});
