@@ -898,7 +898,7 @@ starting_hp: INTEGER based on physical description. Average=100, athletic=120-15
     const startingHp=parseInt(gen.starting_hp)||100;
 
     // Store canon details in canon_rules for use every turn
-    const fullCanon=(gen.canon_rules||'')+(canonCheck.canon_details?'\n\nCANON REFERENCE:\n'+canonCheck.canon_details:'');
+    const fullCanon=(gen.canon_rules||'')+(arcDetails?'\n\nCANON REFERENCE:\n'+arcDetails:'');
 
     const [world]=await sbP('worlds',{world_name:selWorld.name,genre:selWorld.genre,dm_system_prompt:dmPr,canon_rules:fullCanon,user_id:currentUser?.id||null});
     const wid=world.id;
