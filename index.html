@@ -254,18 +254,24 @@
         </div>
       </div>
       <div class="cat-label" style="margin-bottom:8px;">Or pick from popular worlds</div>
-      <div class="tabs">
+      <div class="tabs" style="flex-wrap:wrap;">
         <div class="tab active" onclick="switchTab('anime',this)">Anime</div>
-        <div class="tab" onclick="switchTab('cultivation',this)">Cultivation</div>
-        <div class="tab" onclick="switchTab('fantasy',this)">Western Fantasy</div>
-        <div class="tab" onclick="switchTab('games',this)">Games</div>
         <div class="tab" onclick="switchTab('manhwa',this)">Manhwa</div>
+        <div class="tab" onclick="switchTab('lightnovel',this)">Light Novels</div>
+        <div class="tab" onclick="switchTab('comics',this)">Comics</div>
+        <div class="tab" onclick="switchTab('tv',this)">TV Series</div>
+        <div class="tab" onclick="switchTab('movies',this)">Movies</div>
+        <div class="tab" onclick="switchTab('games',this)">Games</div>
+        <div class="tab" onclick="switchTab('books',this)">Books</div>
       </div>
       <div id="tab-anime" class="tab-panel active"></div>
-      <div id="tab-cultivation" class="tab-panel"></div>
-      <div id="tab-fantasy" class="tab-panel"></div>
-      <div id="tab-games" class="tab-panel"></div>
       <div id="tab-manhwa" class="tab-panel"></div>
+      <div id="tab-lightnovel" class="tab-panel"></div>
+      <div id="tab-comics" class="tab-panel"></div>
+      <div id="tab-tv" class="tab-panel"></div>
+      <div id="tab-movies" class="tab-panel"></div>
+      <div id="tab-games" class="tab-panel"></div>
+      <div id="tab-books" class="tab-panel"></div>
       <div id="world-preview" style="display:none;margin-top:6px;">
         <div style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:5px;" id="pv-title"></div>
         <div class="lore-box" id="pv-lore"></div>
@@ -468,18 +474,25 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let suggestTimer=null;
 
+function getAllWorlds(){
+  return Object.values(WORLDS).flat();
+}
+
 function onSearchInput(val){
   clearTimeout(suggestTimer);
   const q=val.trim().toLowerCase();
   if(q.length<2){hideSuggestions();return;}
 
   // Instantly show preset matches
-  const all=[...WORLDS.anime,...WORLDS.cultivation,...WORLDS.fantasy,...WORLDS.games];
-  const matches=all.filter(w=>w.name.toLowerCase().includes(q)||w.tag.toLowerCase().includes(q)||w.genre.toLowerCase().includes(q));
-  showSuggestions(matches.slice(0,6), q, false);
+  const matches=getAllWorlds().filter(w=>
+    w.name.toLowerCase().includes(q)||
+    w.tag.toLowerCase().includes(q)||
+    w.genre.toLowerCase().includes(q)
+  );
+  showSuggestions(matches.slice(0,6), q, matches.length<6);
 
-  // After 600ms with no typing, also ask AI for suggestions
-  suggestTimer=setTimeout(()=>fetchAISuggestions(q, matches),600);
+  // After 600ms fire AI suggestions for anything not in presets
+  if(matches.length<4) suggestTimer=setTimeout(()=>fetchAISuggestions(q, matches),600);
 }
 
 function showSuggestions(items, q, loading){
@@ -507,9 +520,6 @@ name: exact series name. tag: 2-3 word descriptor. icon: single emoji. Only incl
       [{role:'user',content:`Search query: "${q}"`}],300);
     const suggestions=JSON.parse(raw.replace(/```json|```/g,'').trim());
     if(!Array.isArray(suggestions)||!suggestions.length) return;
-    const all=[...WORLDS.anime,...WORLDS.cultivation,...WORLDS.fantasy,...WORLDS.games];
-    const matches=all.filter(w=>w.name.toLowerCase().includes(q));
-    // Add AI suggestions as clickable items that trigger a search
     const box=$('suggestions');
     if(!box||box.style.display==='none') return;
     const aiHTML=suggestions.map(s=>`
@@ -526,8 +536,7 @@ name: exact series name. tag: 2-3 word descriptor. icon: single emoji. Only incl
 }
 
 function pickSuggestion(id){
-  const all=[...WORLDS.anime,...WORLDS.cultivation,...WORLDS.fantasy,...WORLDS.games];
-  const w=all.find(x=>x.id===id);
+  const w=getAllWorlds().find(x=>x.id===id);
   if(!w) return;
   $('wsearch').value=w.name;
   hideSuggestions();
@@ -600,7 +609,52 @@ const WORLDS = {
     {id:'duchesslife',name:'Second Life Ranker',icon:'⏱',tag:'Yeon-woo · Tower',genre:'Manhwa / Tower',lore:'Yeon-woo enters a mysterious Tower to avenge his twin brother. Traits, skills, and Divine Factors accumulate as he climbs. Ancient gods, clans, and the legacy of the Hoarder await on each floor of an infinite challenge.'},
   ]
 };
-const TABS=['anime','cultivation','fantasy','games','manhwa'];
+
+// Add new categories
+WORLDS.lightnovel=[
+  {id:'lotm',name:'Lord of the Mysteries',icon:'🎩',tag:'Sequence · Beyond God',genre:'Light Novel / Mystery',lore:'Victorian-era world where Beyonders consume potions to gain powers tied to Sequences 9 through 0. The Fool pathway leads to godhood. The Outer Deities and ancient gods lurk beyond reality. Klein Moretti navigates secret societies, sealed artifacts, and cosmic horror.'},
+  {id:'rezero',name:'Re:Zero',icon:'💀',tag:'Return by Death · Witch',genre:'Light Novel / Isekai',lore:'Subaru Natsuki can Return by Death — respawning at a save point when killed. The Witch of Envy\'s Miasma clings to him. Emilia and the royal selection, Witch Cultists, and ancient Sins shape a world where death is just the beginning of understanding.'},
+  {id:'sao',name:'Sword Art Online',icon:'⚔',tag:'VR · Kirito',genre:'Light Novel / VR',lore:'Players trapped in a virtual reality MMORPG where death in game means death in reality. Sword Skills, levels, and guilds define survival. Aincrad\'s 100 floors must be cleared. Later arcs explore Alfheim, GGO, and the Underworld.'},
+  {id:'overlord',name:'Overlord',icon:'💀',tag:'Ainz · Nazarick',genre:'Light Novel / Isekai',lore:'Ainz Ooal Gown, the last player in Yggdrasil, finds himself in a real world as his undead overlord character. The Great Tomb of Nazarick houses Floor Guardians of supreme power. World domination begins with understanding this new reality.'},
+  {id:'mushokutensei',name:'Mushoku Tensei',icon:'🌱',tag:'Rudeus · Magic',genre:'Light Novel / Isekai',lore:'A 34-year-old reincarnates as Rudeus Greyrat with memories intact. The Laplace Factor and Mana Calamity reshape the world. Magic ranks from Water God to Divine rank. Human-God manipulates fate across timelines.'},
+  {id:'tensura',name:'That Time I Got Reincarnated as a Slime',icon:'🟦',tag:'Rimuru · Tempest',genre:'Light Novel / Isekai',lore:'Satoru Mikami reincarnates as a slime with Great Sage and Predator skills. Absorbing monsters grants their abilities. The Jura Tempest Federation grows from a monster village to a nation. Demon Lords, True Dragons, and Godlike beings exist at the top.'},
+  {id:'mahouka',name:'The Irregular at Magic High School',icon:'🔮',tag:'Tatsuya · Modern Magic',genre:'Light Novel / Magic',lore:'Modern Japan where magic is technology. First Course students show talent; Second Course are irregular. Tatsuya Shiba hides overwhelming power classified beyond ordinary scales. CADs channel psions into Sequences for combat and industry.'},
+  {id:'danmachi',name:'Is It Wrong to Try to Pick Up Girls in a Dungeon?',icon:'🗡',tag:'Bell · Familia',genre:'Light Novel / Dungeon',lore:'Orario sits above a vast Dungeon filled with monsters that drop magic stones and drop items. Gods descended to grant Falna — status abilities that grow through battle. Familia compete for fame, floors, and favor of the gods.'},
+];
+
+WORLDS.comics=[
+  {id:'marvel',name:'Marvel Universe',icon:'🕷',tag:'Heroes · Multiverse',genre:'Comics / Marvel',lore:'Earth-616 — a world of superheroes, mutants, and cosmic entities. The Avengers, X-Men, and Fantastic Four protect a world that fears and needs them. Infinity Stones, the Multiverse, and Celestials define the scale. Anyone can be a hero or a villain.'},
+  {id:'dc',name:'DC Universe',icon:'🦇',tag:'Heroes · Gotham',genre:'Comics / DC',lore:'A world of gods and mortals. Superman embodies hope, Batman embodies will, Wonder Woman embodies truth. The Speed Force, Lantern Corps, and the Source Wall define cosmic boundaries. Gotham, Metropolis, and Central City are where legends are made.'},
+  {id:'invincible',name:'Invincible',icon:'💪',tag:'Mark · Viltrumite',genre:'Comics / Superhero',lore:'Mark Grayson inherits Viltrumite powers — strength, speed, flight, durability beyond human limits. The Viltrumite Empire seeks to conquer Earth. Cecil Stedman and the Global Defense Agency manipulate from the shadows. Nobody is truly safe.'},
+  {id:'towerofgod',name:'Tower of God',icon:'🗼',tag:'Bam · Tower',genre:'Manhwa / Tower',lore:'An infinite Tower where climbing means power, wealth, or any wish granted. Regulars compete in Tests designed by Headon. Shinsu — the Tower\'s energy — enables combat, healing, and manipulation. FUG, Zahard\'s Princesses, and the 10 Great Families rule the upper floors.'},
+];
+
+WORLDS.tv=[
+  {id:'breakingbad',name:'Breaking Bad',icon:'🧪',tag:'Walter White · Meth',genre:'TV Drama',lore:'Albuquerque, New Mexico. A chemistry teacher turned drug manufacturer. The cartel, DEA, and rival cooks create a dangerous ecosystem. Loyalty, pride, and desperation shape every deal. The meth business tolerates no weakness and forgets nothing.'},
+  {id:'gameofthrones',name:'Game of Thrones',icon:'🐉',tag:'Westeros · Iron Throne',genre:'TV / Fantasy',lore:'Seven Kingdoms wage war for the Iron Throne. Noble houses scheme, betray, and die. Dragons, White Walkers, and prophecy shape fate. Power corrupts absolutely in a world where the good die young and the ruthless survive — sometimes.'},
+  {id:'theboys',name:'The Boys',icon:'⚡',tag:'Supes · Vought',genre:'TV / Superhero',lore:'Supes are corporate products controlled by Vought International. Compound V created their powers. Homelander leads the Seven with a smile hiding genuine terror. The Boys — a small crew of powerless humans — fight back with leverage, guts, and very bad plans.'},
+  {id:'strangerthings',name:'Stranger Things',icon:'🔦',tag:'Hawkins · Upside Down',genre:'TV / SciFi Horror',lore:'Hawkins, Indiana hides a tear to the Upside Down — a mirror dimension of decay and monsters. Eleven\'s psychic powers bridge both worlds. The Mind Flayer, Vecna, and Demogorgons threaten everyone. Friendship is the only consistent weapon.'},
+  {id:'arcane',name:'Arcane',icon:'⚙',tag:'Piltover · Undercity',genre:'TV / Animated',lore:'Piltover — the City of Progress — sits above the Undercity it exploits. Hextech merges magic with technology. Vi and Jinx\'s fractured sisterhood drives the conflict. Silco\'s empire, Jayce\'s vision, and ancient shimmer reshape what power means.'},
+];
+
+WORLDS.movies=[
+  {id:'starwars',name:'Star Wars',icon:'⚔',tag:'Force · Galaxy Far Away',genre:'Movie / Space Opera',lore:'A galaxy ruled by the Force — light and dark side binding all living things. Jedi Knights and Sith Lords wage eternal war. The Empire, Rebellion, and First Order reshape galactic power. Lightsabers, hyperspace, and the Chosen One prophecy define the saga.'},
+  {id:'mcu',name:'Marvel Cinematic Universe',icon:'🔴',tag:'Avengers · Infinity',genre:'Movie / Superhero',lore:'Earth\'s Mightiest Heroes defend a world of superhumans, alien threats, and Infinity Stones. Tony Stark\'s legacy, the Multiverse Saga, and Kang the Conqueror define the current era. Anyone can be a hero — with the right arc reactor or super serum.'},
+  {id:'matrix',name:'The Matrix',icon:'💊',tag:'Neo · Simulation',genre:'Movie / SciFi',lore:'Reality is a simulation built by machines to harvest human energy. The red pill reveals the truth. Zion holds the last free humans. Agents enforce the simulation. Neo\'s abilities bend the Matrix\'s rules — and the war between man and machine reaches its final chapter.'},
+  {id:'johnwick',name:'John Wick',icon:'🐕',tag:'Baba Yaga · Continental',genre:'Movie / Action',lore:'A secret underworld of assassins governed by the High Table. The Continental hotels are neutral ground — violate the rules and face excommunicado. Gold coins are the currency. John Wick is the man you send to kill the Boogeyman.'},
+  {id:'avatar',name:'Avatar',icon:'🌿',tag:'Na\'vi · Pandora',genre:'Movie / SciFi',lore:'Pandora — a lush moon where the Na\'vi live in harmony with Eywa, the neural network connecting all life. RDA corporations mine Unobtanium at any cost. Avatar bodies allow humans to integrate. The Metkayina and forest clans face colonial extinction.'},
+];
+
+WORLDS.books=[
+  {id:'lotr2',name:'Lord of the Rings',icon:'💍',tag:'Middle-earth · Third Age',genre:'Books / High Fantasy',lore:'Middle-earth in the Third Age. Elves fade, Dwarves delve, Men rise, Sauron\'s shadow grows. The One Ring must be destroyed in the fires of Mount Doom. The War of the Ring determines the fate of all free peoples.'},
+  {id:'dune',name:'Dune',icon:'🏜',tag:'Arrakis · Spice',genre:'Books / SciFi',lore:'Arrakis — the only source of the Spice Melange that enables space travel and prescience. House Atreides inherits a trap. The Fremen, Bene Gesserit, Spacing Guild, and Emperor compete for control. Paul Atreides walks a path that could save or doom humanity.'},
+  {id:'mistborn3',name:'Mistborn',icon:'🌫',tag:'Allomancy · Ash World',genre:'Books / Fantasy',lore:'An ashen world ruled by the immortal Lord Ruler. Allomancy — swallowing and burning metals for power — divides Mistings from the rare Mistborn. A crew of thieves plans to topple a god who has ruled for a thousand years.'},
+  {id:'stormlight2',name:'The Stormlight Archive',icon:'💎',tag:'Stormlight · Radiant',genre:'Books / Epic Fantasy',lore:'Roshar — a world of stone and storm. Stormlight powers Fabrials and ancient Knights Radiant. Shardblades cut souls. Spren bond with humans to grant Surgebinding. The Desolations return and the world is not ready.'},
+  {id:'witcher4',name:'The Witcher',icon:'🐺',tag:'Geralt · Continent',genre:'Books / Dark Fantasy',lore:'A morally grey continent of humans, elves, dwarves, and monsters. Witchers are mutated monster hunters — feared and essential. The Nilfgaardian Empire expands. Elder Blood and prophecy bind destinies no one asked for.'},
+  {id:'kingkiller',name:'The Kingkiller Chronicle',icon:'🎭',tag:'Kvothe · Arcanum',genre:'Books / Fantasy',lore:'Kvothe — musician, arcanist, legend — tells his own story at an inn. The University teaches Sympathy, Naming, and Artificing. The Chandrian killed his family. The Amyr may not exist. Every rumor about Kvothe is true, and none of them are.'},
+];
+
+const TABS=['anime','manhwa','lightnovel','comics','tv','movies','games','books'];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  STATE
