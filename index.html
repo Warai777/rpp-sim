@@ -304,14 +304,8 @@
         <label>Backstory <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;">— or pick a preset</span></label>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;" id="preset-btns">
           <button class="btn btn-sm preset-pick" onclick="pickPreset('isekai')">🌀 Isekai'd</button>
-          <button class="btn btn-sm preset-pick" onclick="pickPreset('bandit')">🗡 Bandit</button>
-          <button class="btn btn-sm preset-pick" onclick="pickPreset('noble')">👑 Noble Heir</button>
-          <button class="btn btn-sm preset-pick" onclick="pickPreset('orphan')">🔥 Street Orphan</button>
-          <button class="btn btn-sm preset-pick" onclick="pickPreset('soldier')">⚔️ Veteran Soldier</button>
-          <button class="btn btn-sm preset-pick" onclick="pickPreset('merchant')">💰 Traveling Merchant</button>
-          <button class="btn btn-sm preset-pick" onclick="pickPreset('scholar')">📚 Disgraced Scholar</button>
-          <button class="btn btn-sm preset-pick" onclick="pickPreset('prodigy')">⚡ Fallen Prodigy</button>
-          <button class="btn btn-sm preset-pick" onclick="pickPreset('slave')">⛓ Escaped Slave</button>
+        </div>
+        <div id="preset-loading" style="display:none;font-size:11px;color:var(--text3);margin-bottom:8px;"><span class="spin" style="width:10px;height:10px;border-width:2px;"></span> Loading world presets…</div>
           <button class="btn btn-sm preset-pick" onclick="pickPreset('god')">✨ Reincarnated God</button>
         </div>
         <textarea id="cback" rows="3" placeholder="Where did you come from? What shaped you before this story began? (or pick a preset above)"></textarea>
@@ -479,6 +473,31 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  CURRENCY — single source of truth
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function getCurrency(){
+  if(curPS?.notes){const m=curPS.notes.match(/CUR:([^|$\n]+)/);if(m&&m[1].trim())return m[1].trim();}
+  const wn=(cachedWorld?.world_name||'').toLowerCase();
+  if(wn.includes('one piece')||wn.includes('pirate'))return 'Berries';
+  if(wn.includes('naruto')||wn.includes('shinobi'))return 'Ryo';
+  if(wn.includes('dragon ball'))return 'Zeni';
+  if(wn.includes('bleach'))return 'Kan';
+  if(wn.includes('attack on titan'))return 'Eldian Marks';
+  if(wn.includes('cyberpunk'))return 'Eddies';
+  if(wn.includes('witcher'))return 'Crowns';
+  if(wn.includes('mistborn'))return 'Clips';
+  if(wn.includes('elden ring'))return 'Runes';
+  if(wn.includes('dark souls'))return 'Souls';
+  if(wn.includes('final fantasy'))return 'Gil';
+  if(wn.includes('jujutsu'))return 'Yen';
+  if(wn.includes('demon slayer'))return 'Mon';
+  if(wn.includes('solo leveling'))return 'Won';
+  if(wn.includes('dune'))return 'Solaris';
+  if(wn.includes('star wars'))return 'Credits';
+  return 'Gold';
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  CHARACTER PORTRAIT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1109,7 +1128,81 @@ function useCustomDesc(){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  CHARACTER CREATION
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function goToChar(){if(!selWorld)return;$('char-title').textContent=(selWorld.icon||'🌐')+' '+selWorld.name;$('cname').value='';$('capp').value='';$('cback').value='';$('cpers').value='';nav('create-char');}
+function goToChar(){
+  if(!selWorld)return;
+  $('char-title').textContent=(selWorld.icon||'🌐')+' '+selWorld.name;
+  $('cname').value='';$('capp').value='';$('cback').value='';$('cpers').value='';
+  nav('create-char');
+  generateWorldPresets(selWorld);
+}
+
+let worldPresetData={};
+
+async function generateWorldPresets(world){
+  const btn=$('preset-btns');
+  const loading=$('preset-loading');
+  // Always keep Isekai as first option
+  btn.innerHTML=`<button class="btn btn-sm preset-pick" onclick="pickDynPreset('isekai_${world.id}')">🌀 Isekai'd</button>`;
+  loading.style.display='flex';
+  try{
+    const raw=await callAI(`Generate 6 character backstory presets that fit the world of ${world.name} (${world.genre}).
+Return ONLY raw JSON array — no markdown:
+[{"label":"Short Label","icon":"emoji","back":"2-3 sentence backstory specific to this world","pers":"personality traits"}]
+Each preset must be grounded in ${world.name} lore — reference actual factions, locations, roles from this world. Examples for One Piece: Marine deserter, failed pirate, East Blue fisherman, bounty hunter. For Naruto: Academy dropout, missing-nin, civilian with a secret, clan heir. Make them varied and interesting starting points.`,
+    [{role:'user',content:`World: ${world.name}\nGenre: ${world.genre}\nLore: ${world.lore?.slice(0,300)||''}`}],600);
+    const presets=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    worldPresetData[world.id]=presets;
+    // Add Isekai preset
+    worldPresetData[world.id].unshift({
+      label:"Isekai'd",icon:'🌀',
+      back:`A person from modern Earth who died and woke up in the world of ${world.name} with no explanation, no powers, and only their real-world knowledge to rely on.`,
+      pers:'Analytical, adaptable, secretly terrified but hiding it well'
+    });
+    btn.innerHTML=presets.map((p,i)=>
+      `<button class="btn btn-sm preset-pick" onclick="pickDynPreset('${world.id}_${i}')">${p.icon} ${p.label}</button>`
+    ).join('');
+  }catch(e){
+    // Fallback to generic presets if AI fails
+    btn.innerHTML=`
+      <button class="btn btn-sm preset-pick" onclick="pickDynPreset('isekai_${world.id}')">🌀 Isekai'd</button>
+      <button class="btn btn-sm preset-pick" onclick="pickDynPreset('generic_bandit')">🗡 Bandit</button>
+      <button class="btn btn-sm preset-pick" onclick="pickDynPreset('generic_orphan')">🔥 Street Orphan</button>
+      <button class="btn btn-sm preset-pick" onclick="pickDynPreset('generic_soldier')">⚔️ Soldier</button>
+      <button class="btn btn-sm preset-pick" onclick="pickDynPreset('generic_noble')">👑 Noble</button>`;
+  }
+  loading.style.display='none';
+}
+
+function pickDynPreset(key){
+  // Handle isekai special case
+  if(key.startsWith('isekai_')){
+    const worldId=key.replace('isekai_','');
+    const world=getAllWorlds().find(w=>w.id===worldId)||selWorld;
+    $('cback').value=`A person from modern Earth who died and woke up in ${world?.name||'this world'} with no explanation, no powers, and only their real-world knowledge to rely on.`;
+    if(!$('cpers').value)$('cpers').value='Analytical, adaptable, secretly terrified but hiding it well';
+    document.querySelectorAll('.preset-pick').forEach(b=>b.classList.remove('active'));
+    event.target.classList.add('active');
+    return;
+  }
+  // Handle generic fallbacks
+  if(key.startsWith('generic_')){
+    const type=key.replace('generic_','');
+    if(PRESETS[type]){$('cback').value=PRESETS[type].back;if(!$('cpers').value)$('cpers').value=PRESETS[type].pers;}
+    document.querySelectorAll('.preset-pick').forEach(b=>b.classList.remove('active'));
+    event.target.classList.add('active');
+    return;
+  }
+  // Handle world-specific presets
+  const [worldId,indexStr]=key.split('_');
+  const presets=worldPresetData[worldId];
+  if(!presets) return;
+  const p=presets[parseInt(indexStr)];
+  if(!p) return;
+  $('cback').value=p.back;
+  if(!$('cpers').value)$('cpers').value=p.pers;
+  document.querySelectorAll('.preset-pick').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+}
 
 const PRESETS={
   isekai:{back:'A regular person from modern Earth who died suddenly and woke up in this world with no explanation, no special powers, and only their real-world knowledge to rely on.',pers:'Analytical, adaptable, secretly terrified but hiding it well'},
@@ -1218,8 +1311,7 @@ async function enterWorld(wid,opening=false){
     updateSB();checkMob();
     // set shop currency label — try stored CUR: first, then derive from world name
     const curM2=ps?.notes?.match(/CUR:([^|$\n]+)/);
-    let shopCur=curM2?curM2[1].trim():'';
-    if(!shopCur){const wn=world.world_name.toLowerCase();if(wn.includes('one piece')||wn.includes('pirate'))shopCur='Berries';else if(wn.includes('naruto'))shopCur='Ryo';else if(wn.includes('dragon ball'))shopCur='Zeni';else if(wn.includes('bleach'))shopCur='Kan';else if(wn.includes('cyberpunk'))shopCur='Eddies';else if(wn.includes('witcher'))shopCur='Crowns';else if(wn.includes('elden'))shopCur='Runes';else if(wn.includes('dark souls'))shopCur='Souls';else if(wn.includes('final fantasy'))shopCur='Gil';else if(wn.includes('mistborn'))shopCur='Clips';else shopCur='Gold';}
+    let shopCur=getCurrency();
     $('shop-currency').textContent=shopCur;
     $('sb-cur-label').textContent=shopCur;
 
@@ -1608,35 +1700,73 @@ function vsbBtn(name, source){
 async function openShop(){
   $('shop-ov').classList.add('open');
   const recsEl=$('shop-results');
-  recsEl.innerHTML='<div style="text-align:center;padding:20px;"><span class="spin"></span><div style="font-size:12px;color:var(--text3);margin-top:8px;">Analyzing your situation…</div></div>';
+  recsEl.innerHTML='<div style="text-align:center;padding:20px;"><span class="spin"></span><div style="font-size:12px;color:var(--text3);margin-top:8px;">Consulting the Archive…</div></div>';
   try{
     const gs=curGS,ps=curPS;
     const [world]=await sbG('worlds',`id=eq.${curWorldId}&select=world_name,genre`);
-    const curM=ps?.notes?.match(/CUR:([^|$\n]+)/);
-    let curName=curM?curM[1].trim():'';
-    if(!curName){const wn=((world?.world_name||'')+' '+(world?.genre||'')).toLowerCase();if(wn.includes('one piece')||wn.includes('pirate'))curName='Berries';else if(wn.includes('naruto')||wn.includes('shinobi'))curName='Ryo';else if(wn.includes('dragon ball'))curName='Zeni';else if(wn.includes('bleach'))curName='Kan';else if(wn.includes('attack on titan'))curName='Eldian Marks';else if(wn.includes('cyberpunk'))curName='Eddies';else if(wn.includes('witcher'))curName='Crowns';else if(wn.includes('mistborn'))curName='Clips';else if(wn.includes('elden ring'))curName='Runes';else if(wn.includes('dark souls'))curName='Souls';else if(wn.includes('final fantasy'))curName='Gil';else if(wn.includes('jujutsu'))curName='Yen';else if(wn.includes('demon slayer'))curName='Mon';else if(wn.includes('solo leveling'))curName='Won';else curName='Gold';}
+    const curName=getCurrency();
     $('shop-currency').textContent=curName;
     const balance=gs?.berry||0;
-    const raw=await callAI(
-`You are the Universal Shop proprietor. Analyze this player's situation and recommend 1-3 items they can actually afford that would genuinely help them right now.
-Output ONLY pipe-separated lines or the word NONE:
-NAME|SOURCE|SHORT_DESCRIPTION|PRICE_NUMBER|POWER_REQUIREMENT|yes_or_no_canon
-Rules:
-- ONLY recommend items the player can afford (balance: ${balance} ${curName})
-- Items must be genuinely useful given their current situation, location, and power level
-- Price items realistically within their budget
-- If nothing useful and affordable exists, output exactly: NONE
-- No extra text, just the lines or NONE`,
-      [{role:'user',content:`World: ${world?.world_name}\nBalance: ${balance} ${curName}\nHP: ${gs?.hp}\nLocation: ${gs?.current_location}\nPower: ${ps?.current_level||'unknown'} — ${ps?.system_name||'unknown'}\nAbilities: ${ps?.special_abilities||'none'}\nStage: ${gs?.power_stage||'beginning'}`}],600);
-    if(raw.trim()==='NONE'||!raw.includes('|')){
-      recsEl.innerHTML=`<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;">Recommendations</div><div style="color:var(--text3);font-size:13px;padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:16px;">No recommendations — nothing affordable or useful for your current situation.</div><div style="font-size:11px;color:var(--text3);margin-top:4px;">Search for anything below.</div>`;
+    const {api}=cfg();
+
+    // Search VS Battles Wiki for items relevant to this player's situation
+    const searchRes=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':api,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:800,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        system:`You are searching VS Battles Wiki to recommend real canon items for a player. Search vsbattles.fandom.com for items that would genuinely help this player given their situation. Only return items the player can afford. Return ONLY pipe-separated lines, max 3, or NONE:
+NAME|SOURCE_SERIES|ONE_SENTENCE_DESCRIPTION|PRICE_IN_CURRENCY|POWER_REQUIREMENT|VSBATTLES_WIKI_URL
+
+PRICING tiers: Street(100-10k) Enhanced(10k-500k) Superhuman(500k-10M) Country(10M-500M) Planet(500M-10B) Galaxy+(10B+) Beyond God(999T+)
+CRITICAL: Only real items from VS Battles Wiki with actual URLs. Never invent. If nothing fits: NONE`,
+        messages:[{role:'user',content:`Player world: ${world?.world_name}\nBalance: ${balance} ${curName}\nHP: ${gs?.hp}\nLocation: ${gs?.current_location}\nPower level: ${ps?.current_level||'unknown'}\nSituation: ${gs?.power_stage||'beginning'}\n\nSearch vsbattles.fandom.com for 1-3 affordable items that would genuinely help this player right now. Items must cost less than ${balance} ${curName}.`}]
+      })
+    });
+
+    const sd=await searchRes.json();
+    const rawText=sd.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n')||'';
+    const lines=rawText.split('\n').filter(l=>l.includes('|')&&!l.startsWith('NAME')&&l.trim()!=='NONE');
+
+    if(!lines.length){
+      recsEl.innerHTML=`
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">Curator's Recommendation</div>
+        <div style="padding:16px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);margin-bottom:16px;">
+          <div style="font-size:13px;color:var(--text2);line-height:1.6;">The Archive finds no verified artifacts within your means at this juncture. Your current resources do not meet the threshold for available acquisitions — or no catalogued relics align with your present circumstances.</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:8px;">Expand your search below, or return when your fortunes have changed.</div>
+        </div>
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">Manual Search</div>`;
       return;
     }
-    const recItems=parseShopText(raw,curName);
+
+    const recItems=lines.slice(0,3).map(line=>{
+      const parts=line.split('|').map(p=>p.trim());
+      const price=parseInt((parts[3]||'0').replace(/[^0-9]/g,''))||0;
+      return {name:parts[0]||'Unknown',canon_source:parts[1]||'Unknown',description:parts[2]||'',price,currency:curName,power_requirement:parts[4]||'Unknown',wiki_url:parts[5]||`https://vsbattles.fandom.com/wiki/${encodeURIComponent((parts[0]||'').replace(/\s+/g,'_'))}`,canon_accurate:true};
+    }).filter(i=>i.name!=='Unknown');
+
     shopItems=recItems;
-    recsEl.innerHTML=`<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">Recommended for you</div>${recItems.map((item,i)=>`<div class="shop-item" style="border-color:var(--accentD);"><div class="shop-item-name">${esc(item.name)} <span style="font-size:10px;color:var(--accent);background:var(--accentG);padding:1px 6px;border-radius:3px;">Recommended</span>${!item.canon_accurate?' <span style="font-size:10px;color:var(--amber);background:rgba(212,148,74,.15);padding:1px 6px;border-radius:3px;">Fan-made</span>':''}</div><div style="font-size:11px;color:var(--accent);margin-bottom:4px;">From: ${esc(item.canon_source)}</div><div class="shop-item-desc">${esc(item.description)}</div><div style="margin-bottom:6px;">${vsbBtn(item.name,item.canon_source)}</div><div class="shop-item-footer"><div><div class="shop-price">${Number(item.price).toLocaleString()} ${esc(item.currency)}</div><div class="shop-req">Req: ${esc(item.power_requirement)}</div></div><button class="btn btn-p btn-sm" onclick="buyItem(${i})">Buy</button></div></div>`).join('')}<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin:16px 0 6px;">Search anything else</div>`;
+    recsEl.innerHTML=`
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;">Curator's Recommendation</div>
+      ${recItems.map((item,i)=>`
+        <div class="shop-item" style="border-color:var(--accentD);">
+          <div class="shop-item-name">${esc(item.name)}
+            <span style="font-size:10px;color:var(--accent);background:var(--accentG);padding:1px 6px;border-radius:3px;">Recommended</span>
+            <span style="font-size:10px;color:var(--green);background:rgba(76,175,130,.15);padding:1px 6px;border-radius:3px;">✓ Canon</span>
+          </div>
+          <div style="font-size:11px;color:var(--accent);margin-bottom:4px;">From: ${esc(item.canon_source)}</div>
+          <div class="shop-item-desc">${esc(item.description)}</div>
+          <div style="margin-bottom:8px;"><a href="${item.wiki_url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--cyan);text-decoration:none;border:1px solid rgba(74,184,212,.3);border-radius:4px;padding:3px 8px;">⚔ View on VS Battles Wiki</a></div>
+          <div class="shop-item-footer">
+            <div><div class="shop-price">${Number(item.price).toLocaleString()} ${esc(item.currency)}</div><div class="shop-req">Req: ${esc(item.power_requirement)}</div></div>
+            <button class="btn btn-p btn-sm" onclick="buyItem(${i})">Buy</button>
+          </div>
+        </div>`).join('')}
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin:16px 0 6px;">Search the Archive</div>`;
   }catch(e){
-    recsEl.innerHTML='<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px;">Search for any item, ability, or technique from any fiction.</div>';
+    recsEl.innerHTML='<div style="color:var(--text3);text-align:center;padding:20px;font-size:13px;">The Archive is momentarily unreachable. Search manually below.</div>';
   }
 }
 function closeShop(){$('shop-ov').classList.remove('open');}
@@ -1656,66 +1786,80 @@ function parseShopText(raw, curName){
 async function searchShop(){
   const q=$('shop-query').value.trim();if(!q)return;
   const btn=$('shop-btn');btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
-  $('shop-results').innerHTML='<div style="text-align:center;padding:20px;"><span class="spin"></span></div>';
+  $('shop-results').innerHTML='<div style="text-align:center;padding:20px;"><span class="spin"></span><div style="font-size:11px;color:var(--text3);margin-top:8px;">Searching VS Battles Wiki…</div></div>';
   shopItems=[];
   try{
     const gs=curGS,ps=curPS;
     const [world]=await sbG('worlds',`id=eq.${curWorldId}&select=world_name,genre`);
-    // Currency: try notes first, then derive from world name + genre
-    const curM=ps?.notes?.match(/CUR:([^|$\n]+)/);
-    let curName=curM?curM[1].trim():'';
-    if(!curName){
-      const wn=((world?.world_name||'')+' '+(world?.genre||'')).toLowerCase();
-      if(wn.includes('one piece')||wn.includes('pirate')) curName='Berries';
-      else if(wn.includes('naruto')||wn.includes('shinobi')) curName='Ryo';
-      else if(wn.includes('dragon ball')) curName='Zeni';
-      else if(wn.includes('bleach')||wn.includes('soul society')) curName='Kan';
-      else if(wn.includes('attack on titan')) curName='Eldian Marks';
-      else if(wn.includes('cyberpunk')) curName='Eddies';
-      else if(wn.includes('witcher')) curName='Crowns';
-      else if(wn.includes('mistborn')) curName='Clips';
-      else if(wn.includes('elden ring')) curName='Runes';
-      else if(wn.includes('dark souls')) curName='Souls';
-      else if(wn.includes('final fantasy')) curName='Gil';
-      else if(wn.includes('jujutsu')||wn.includes('kaisen')) curName='Yen';
-      else if(wn.includes('demon slayer')||wn.includes('taisho')) curName='Mon';
-      else if(wn.includes('solo leveling')) curName='Won';
-      else curName='Gold';
-    }
+    const curName=getCurrency();
     $('shop-currency').textContent=curName;
-    const raw=await callAI(
-`You are the Universal Shop proprietor. List 1-3 items matching the search.
-Output ONLY plain lines, one item per line, pipe-separated, NO JSON, NO markdown:
-NAME|SOURCE|SHORT_DESCRIPTION|PRICE_NUMBER|POWER_REQUIREMENT|yes_or_no_canon
 
-PRICING RULES — base price on the ITEM'S absolute power in its own universe, not the player's level:
-- Street level / weak item (knife, potion, basic gear): 100 - 10,000
-- Enhanced human / low superhuman (basic devil fruit, genin jutsu, common magic): 10,000 - 500,000
-- Superhuman / city level (Sharingan, Bankai, mid-tier stand): 500,000 - 10,000,000
-- Country / continent level (Tailed Beast powers, Admiral level, top-tier abilities): 10,000,000 - 500,000,000
-- Planet / star level (Biju full release, top admiral, god-tier devil fruit): 500,000,000 - 10,000,000,000
-- Solar system / galaxy level (Six Paths power, Yhwach, Hagoromo): 10,000,000,000 - 500,000,000,000
-- Universe / multiverse level (Zeno, One Above All, True Omnipotents): 500,000,000,000+
-- Sequence 0 / Beyond God tier items (Lord of Mysteries Sequence 0, True Omnipotence): MINIMUM 999,000,000,000,000
+    // Search VS Battles Wiki directly via Anthropic web search
+    const {api}=cfg();
+    const searchRes=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':api,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:800,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        system:`You are searching VS Battles Wiki for real canon items, abilities, and powers. Search for the item on vsbattles.fandom.com and return ONLY real results that have actual wiki pages. Return ONLY pipe-separated lines, one per result, max 3:
+NAME|SOURCE_SERIES|ONE_SENTENCE_DESCRIPTION|PRICE_IN_${curName}|POWER_REQUIREMENT|VSBATTLES_WIKI_URL
 
-IMPORTANT: A godlike item like Sequence 0 The Fool costs TRILLIONS, not thousands. Price must reflect the item's TRUE power ceiling in its source fiction. Never underprice legendary or god-tier items.
+PRICING — based on the item's absolute power tier:
+Street level: 100-10,000 | Enhanced human: 10,000-500,000 | Superhuman/city: 500,000-10,000,000 | Country/continent: 10,000,000-500,000,000 | Planet/star: 500,000,000-10,000,000,000 | Galaxy+: 10,000,000,000+ | Beyond God: 999,000,000,000,000+
 
-- SHORT_DESCRIPTION: one sentence, under 100 chars, no pipe characters
-- POWER_REQUIREMENT: honest warning about what's needed to use it safely
-- yes_or_no_canon: "yes" if genuinely exists in source fiction, "no" if made up
-- Currency is ${curName}
-- No extra text, no headers, just the pipe-separated lines`,
-      [{role:'user',content:`Search: ${q}\nPlayer world: ${world?.world_name||'unknown'}\nPlayer level: ${ps?.current_level||'unknown'}\nPlayer balance: ${gs?.berry||0} ${curName}`}],600);
+CRITICAL: Only return items that actually exist on VS Battles Wiki. The URL must be a real vsbattles.fandom.com page. Never invent items. If nothing real is found output: NONE`,
+        messages:[{role:'user',content:`Search vsbattles.fandom.com for: "${q}"\nPlayer world: ${world?.world_name}\nReturn only real canon results with actual wiki URLs.`}]
+      })
+    });
 
-    const items=parseShopText(raw, curName);
-    if(!items?.length){$('shop-results').innerHTML='<div style="color:var(--text3);text-align:center;padding:20px;">No items found. Try a different search.</div>';return;}
+    const searchData=await searchRes.json();
+    if(!searchRes.ok) throw new Error(searchData.error?.message||'Search failed');
+    const rawText=searchData.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n')||'';
+
+    if(rawText.trim()==='NONE'||!rawText.includes('|')){
+      $('shop-results').innerHTML=`
+        <div style="padding:20px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);text-align:center;">
+          <div style="font-size:22px;margin-bottom:10px;">📜</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px;">Beyond the Scope of the Archive</div>
+          <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:12px;">What you seek has no record in the known catalogues of fiction. Either it does not exist within any documented universe, or it transcends what the Archive has indexed.</div>
+          <a href="https://vsbattles.fandom.com/wiki/Special:Search?query=${encodeURIComponent(q)}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--accent);text-decoration:none;border:1px solid var(--accentD);border-radius:6px;padding:6px 14px;">Search VS Battles Wiki Directly →</a>
+        </div>`;
+      return;
+    }
+
+    // Parse results
+    const lines=rawText.split('\n').filter(l=>l.includes('|')&&!l.startsWith('NAME'));
+    const items=lines.slice(0,3).map(line=>{
+      const parts=line.split('|').map(p=>p.trim());
+      const price=parseInt((parts[3]||'0').replace(/[^0-9]/g,''))||0;
+      return {
+        name:parts[0]||'Unknown',
+        canon_source:parts[1]||'Unknown',
+        description:parts[2]||'',
+        price,
+        currency:curName,
+        power_requirement:parts[4]||'Unknown',
+        wiki_url:parts[5]||`https://vsbattles.fandom.com/wiki/${encodeURIComponent((parts[0]||'').replace(/\s+/g,'_'))}`,
+        canon_accurate:true
+      };
+    }).filter(i=>i.name!=='Unknown');
+
+    if(!items.length){
+      $('shop-results').innerHTML=`<div style="color:var(--text3);text-align:center;padding:20px;">No verified canon items found. <a href="https://vsbattles.fandom.com/wiki/Special:Search?query=${encodeURIComponent(q)}" target="_blank" style="color:var(--accent);">Browse VS Battles Wiki →</a></div>`;
+      return;
+    }
+
     shopItems=items;
     $('shop-results').innerHTML=items.map((item,i)=>`
       <div class="shop-item">
-        <div class="shop-item-name">${esc(item.name)} ${!item.canon_accurate?'<span style="font-size:10px;color:var(--amber);background:rgba(212,148,74,.15);padding:1px 6px;border-radius:3px;">Fan-made</span>':item.canon_source&&item.canon_source!==world?.world_name?'<span style="font-size:10px;color:var(--cyan);background:rgba(74,184,212,.1);padding:1px 6px;border-radius:3px;">Cross-world</span>':''}</div>
+        <div class="shop-item-name">${esc(item.name)} <span style="font-size:10px;color:var(--green);background:rgba(76,175,130,.15);padding:1px 6px;border-radius:3px;">✓ Canon</span>${item.canon_source!==world?.world_name?` <span style="font-size:10px;color:var(--cyan);background:rgba(74,184,212,.1);padding:1px 6px;border-radius:3px;">Cross-world</span>`:''}</div>
         <div style="font-size:11px;color:var(--accent);margin-bottom:4px;">From: ${esc(item.canon_source)}</div>
         <div class="shop-item-desc">${esc(item.description)}</div>
-        <div style="margin-bottom:6px;">${vsbBtn(item.name,item.canon_source)}</div>
+        <div style="margin-bottom:8px;">
+          <a href="${item.wiki_url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--cyan);text-decoration:none;border:1px solid rgba(74,184,212,.3);border-radius:4px;padding:3px 8px;">⚔ View on VS Battles Wiki</a>
+        </div>
         <div class="shop-item-footer">
           <div>
             <div class="shop-price">${Number(item.price).toLocaleString()} ${esc(item.currency)}</div>
@@ -1723,7 +1867,9 @@ IMPORTANT: A godlike item like Sequence 0 The Fool costs TRILLIONS, not thousand
           </div>
           <button class="btn btn-p btn-sm" onclick="buyItem(${i})">Buy</button>
         </div>
-      </div>`).join('');
+      </div>`).join('')+
+      `<div style="text-align:center;margin-top:12px;"><a href="https://vsbattles.fandom.com/wiki/Special:Search?query=${encodeURIComponent(q)}" target="_blank" style="font-size:11px;color:var(--text3);">See more on VS Battles Wiki →</a></div>`;
+
   }catch(e){$('shop-results').innerHTML=`<div style="color:var(--red);padding:16px;">${esc(e.message)}</div>`;}
   finally{btn.innerHTML='Search';btn.disabled=false;}
 }
