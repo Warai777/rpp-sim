@@ -349,6 +349,16 @@
       <button class="btn btn-ico btn-sm" id="sb-close" onclick="toggleSidebar()" style="display:none;font-size:16px;">✕</button>
     </div>
     <div class="sb-char">
+      <!-- Character Portrait -->
+      <div id="char-portrait-wrap" style="position:relative;width:100%;margin-bottom:10px;display:none;">
+        <img id="char-portrait" style="width:100%;border-radius:8px;border:1px solid var(--border2);display:block;" src="" alt="Character">
+        <div id="char-status-badges" style="position:absolute;bottom:6px;left:6px;display:flex;flex-wrap:wrap;gap:3px;"></div>
+        <button onclick="regenPortrait()" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,.6);border:1px solid var(--border);border-radius:4px;color:var(--text3);font-size:10px;padding:2px 6px;cursor:pointer;" title="Regenerate portrait">↻</button>
+      </div>
+      <div id="char-portrait-loading" style="display:none;width:100%;aspect-ratio:1;background:var(--bg2);border-radius:8px;border:1px solid var(--border);display:none;align-items:center;justify-content:center;flex-direction:column;gap:6px;margin-bottom:10px;">
+        <span class="spin"></span>
+        <span style="font-size:10px;color:var(--text3);">Generating portrait…</span>
+      </div>
       <div style="font-size:13px;font-weight:600;" id="sb-name">—</div>
       <div style="font-size:11px;color:var(--text3);margin-top:2px;" id="sb-arch">—</div>
     </div>
@@ -470,8 +480,94 @@
 
 <script>
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  LIVE SEARCH SUGGESTIONS
+//  CHARACTER PORTRAIT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let currentPortraitPrompt='';
+let portraitStatuses=[];
+
+async function generatePortrait(appearance, worldName, statusEffects=[]){
+  const wrap=$('char-portrait-wrap');
+  const loading=$('char-portrait-loading');
+  const img=$('char-portrait');
+  if(!wrap) return;
+
+  wrap.style.display='none';
+  loading.style.display='flex';
+
+  try{
+    // Build a detailed prompt from character appearance + status effects
+    const statusDesc=statusEffects.length?`, ${statusEffects.join(', ')}`:'';
+    const prompt=`anime art style, detailed character portrait, ${appearance}${statusDesc}, ${worldName} universe art style, dramatic lighting, high quality, upper body shot`;
+    currentPortraitPrompt=prompt;
+
+    // Use Pollinations AI — completely free, no key needed
+    const encoded=encodeURIComponent(prompt);
+    const url=`https://image.pollinations.ai/prompt/${encoded}?width=400&height=500&nologo=true&model=flux`;
+
+    img.onload=()=>{
+      loading.style.display='none';
+      wrap.style.display='block';
+      updateStatusBadges(statusEffects);
+    };
+    img.onerror=()=>{loading.style.display='none';};
+    img.src=url;
+  }catch(e){
+    loading.style.display='none';
+  }
+}
+
+function updateStatusBadges(statuses){
+  const badges=$('char-status-badges');
+  if(!badges) return;
+  const statusMap={
+    'poisoned':'🟢 Poisoned',
+    'injured':'🩸 Injured',
+    'bleeding':'🩸 Bleeding',
+    'burned':'🔥 Burned',
+    'exhausted':'😮 Exhausted',
+    'angry':'😤 Enraged',
+    'cursed':'💜 Cursed',
+    'armored':'🛡 Armored',
+    'scarred':'⚔ Scarred',
+    'empowered':'✨ Empowered',
+  };
+  badges.innerHTML=statuses.map(s=>{
+    const label=statusMap[s.toLowerCase()]||s;
+    return `<span style="background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.2);border-radius:3px;padding:2px 5px;font-size:9px;color:white;">${label}</span>`;
+  }).join('');
+}
+
+async function regenPortrait(){
+  if(!curPS) return;
+  const nm=curPS.notes?.match(/N:([^|]+)/);
+  const ap=curPS.notes?.match(/A:([^|]+)/);
+  const name=nm?nm[1].trim():'Character';
+  const appearance=ap?ap[1].trim():'a person';
+  const world=cachedWorld?.world_name||'fantasy';
+  await generatePortrait(appearance, world, portraitStatuses);
+}
+
+// Parse status effects from DM text and update portrait if needed
+function parseStatusEffects(dmText){
+  const statusKeywords=['poisoned','injured','bleeding','burned','exhausted','enraged','angry','cursed','armored','scarred','empowered'];
+  const found=[];
+  const lower=dmText.toLowerCase();
+  statusKeywords.forEach(s=>{if(lower.includes(s))found.push(s);});
+
+  // Check HP for injury status
+  if(curGS?.hp<50&&!found.includes('injured')) found.push('injured');
+  if(curGS?.hp<20&&!found.includes('bleeding')) found.push('bleeding');
+
+  // Only regenerate if statuses changed significantly
+  const newStatuses=JSON.stringify(found.sort());
+  const oldStatuses=JSON.stringify(portraitStatuses.sort());
+  if(newStatuses!==oldStatuses){
+    portraitStatuses=found;
+    updateStatusBadges(found);
+    // Regenerate portrait if statuses changed
+    if(found.length!==portraitStatuses.length) regenPortrait();
+  }
+}
 let suggestTimer=null;
 
 function getAllWorlds(){
@@ -1126,6 +1222,13 @@ async function enterWorld(wid,opening=false){
     if(!shopCur){const wn=world.world_name.toLowerCase();if(wn.includes('one piece')||wn.includes('pirate'))shopCur='Berries';else if(wn.includes('naruto'))shopCur='Ryo';else if(wn.includes('dragon ball'))shopCur='Zeni';else if(wn.includes('bleach'))shopCur='Kan';else if(wn.includes('cyberpunk'))shopCur='Eddies';else if(wn.includes('witcher'))shopCur='Crowns';else if(wn.includes('elden'))shopCur='Runes';else if(wn.includes('dark souls'))shopCur='Souls';else if(wn.includes('final fantasy'))shopCur='Gil';else if(wn.includes('mistborn'))shopCur='Clips';else shopCur='Gold';}
     $('shop-currency').textContent=shopCur;
     $('sb-cur-label').textContent=shopCur;
+
+    // Generate character portrait
+    const pap=ps?.notes?.match(/A:([^|]+)/);
+    if(pap){
+      portraitStatuses=[];
+      generatePortrait(pap[1].trim(), world.world_name, []);
+    }
     if(opening){addSys('The world takes shape…');await genOpening(world,gs,ps);}
     else{
       const hist=await sbG('conversation_history',`world_id=eq.${wid}&select=role,content&order=created_at.asc&limit=60`);
@@ -1260,6 +1363,7 @@ async function sendAction(text){
     parseStats(dm);
     consumeItems(dm, inv);
     autoRemember(dm);
+    parseStatusEffects(dm);
     genOptions(dm, world, text); // pass player action for context
   }catch(e){ty.remove();addSys('Error: '+e.message);}
   finally{busy=false;$('send-btn').disabled=false;}
