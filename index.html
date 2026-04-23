@@ -232,9 +232,14 @@
         <div class="sline"></div>
         <div class="step"><div class="sn">2</div><div class="sl">Your Character</div></div>
       </div>
-      <div style="display:flex;gap:9px;margin-bottom:6px;">
-        <input type="text" id="wsearch" style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 13px;color:var(--text);font-family:var(--font);font-size:14px;" placeholder="Search any world — Jujutsu Kaisen, Mistborn, Coiling Dragon, Dune…" onkeydown="if(event.key==='Enter')doSearch()">
-        <button class="btn btn-p" id="sbtn" onclick="doSearch()">Search</button>
+      <div style="display:flex;gap:9px;margin-bottom:6px;position:relative;">
+        <div style="flex:1;position:relative;">
+          <input type="text" id="wsearch" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 13px;color:var(--text);font-family:var(--font);font-size:14px;box-sizing:border-box;" placeholder="Search any world — Jujutsu Kaisen, Mistborn, Coiling Dragon, Dune…"
+            onkeydown="if(event.key==='Enter'){hideSuggestions();doSearch();}"
+            oninput="onSearchInput(this.value)">
+          <div id="suggestions" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border2);border-radius:var(--r);z-index:50;max-height:280px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);margin-top:3px;"></div>
+        </div>
+        <button class="btn btn-p" id="sbtn" onclick="hideSuggestions();doSearch()">Search</button>
       </div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:18px;">Any fiction — anime, novels, manhwa, games, movies, or your own idea.</div>
       <div id="sr-area" style="display:none;margin-bottom:22px;"><div class="cat-label">Search Results</div><div id="sr-list"></div></div>
@@ -254,6 +259,7 @@
         <div class="tab" onclick="switchTab('cultivation',this)">Cultivation</div>
         <div class="tab" onclick="switchTab('fantasy',this)">Western Fantasy</div>
         <div class="tab" onclick="switchTab('games',this)">Games</div>
+        <div class="tab" onclick="switchTab('manhwa',this)">Manhwa</div>
       </div>
       <div id="tab-anime" class="tab-panel active"></div>
       <div id="tab-cultivation" class="tab-panel"></div>
@@ -457,8 +463,89 @@
 
 <script>
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  WORLD DATA
+//  LIVE SEARCH SUGGESTIONS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let suggestTimer=null;
+
+function onSearchInput(val){
+  clearTimeout(suggestTimer);
+  const q=val.trim().toLowerCase();
+  if(q.length<2){hideSuggestions();return;}
+
+  // Instantly show preset matches
+  const all=[...WORLDS.anime,...WORLDS.cultivation,...WORLDS.fantasy,...WORLDS.games];
+  const matches=all.filter(w=>w.name.toLowerCase().includes(q)||w.tag.toLowerCase().includes(q)||w.genre.toLowerCase().includes(q));
+  showSuggestions(matches.slice(0,6), q, false);
+
+  // After 600ms with no typing, also ask AI for suggestions
+  suggestTimer=setTimeout(()=>fetchAISuggestions(q, matches),600);
+}
+
+function showSuggestions(items, q, loading){
+  const box=$('suggestions');
+  if(!items.length&&!loading){hideSuggestions();return;}
+  box.style.display='block';
+  const presetHTML=items.map(w=>`
+    <div onclick="pickSuggestion('${w.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+      <span style="font-size:20px;">${w.icon||'🌐'}</span>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);">${w.name}</div>
+        <div style="font-size:11px;color:var(--text3);">${w.tag}</div>
+      </div>
+    </div>`).join('');
+  const loadingHTML=loading?`<div style="padding:10px 14px;font-size:12px;color:var(--text3);display:flex;align-items:center;gap:8px;"><span class="spin" style="width:12px;height:12px;border-width:2px;"></span> Finding more matches…</div>`:'';
+  box.innerHTML=presetHTML+loadingHTML;
+}
+
+async function fetchAISuggestions(q, alreadyFound){
+  const alreadyIds=alreadyFound.map(w=>w.name.toLowerCase());
+  try{
+    const raw=await callAI(`List up to 4 fictional universes (anime, manga, manhwa, novels, games, movies) that match this search query. Return ONLY a JSON array of objects, no markdown:
+[{"name":"...","tag":"...","icon":"..."}]
+name: exact series name. tag: 2-3 word descriptor. icon: single emoji. Only include series NOT in this list: ${alreadyIds.join(', ')}. If nothing matches return [].`,
+      [{role:'user',content:`Search query: "${q}"`}],300);
+    const suggestions=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    if(!Array.isArray(suggestions)||!suggestions.length) return;
+    const all=[...WORLDS.anime,...WORLDS.cultivation,...WORLDS.fantasy,...WORLDS.games];
+    const matches=all.filter(w=>w.name.toLowerCase().includes(q));
+    // Add AI suggestions as clickable items that trigger a search
+    const box=$('suggestions');
+    if(!box||box.style.display==='none') return;
+    const aiHTML=suggestions.map(s=>`
+      <div onclick="pickAISuggestion('${esc(s.name)}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+        <span style="font-size:20px;">${s.icon||'🌐'}</span>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);">${esc(s.name)}</div>
+          <div style="font-size:11px;color:var(--text3);">${esc(s.tag)}</div>
+        </div>
+      </div>`).join('');
+    box.innerHTML=box.innerHTML.replace(/<div.*?Finding more.*?<\/div>/s,'')+aiHTML;
+    if(!box.innerHTML.trim()) hideSuggestions();
+  }catch(_){}
+}
+
+function pickSuggestion(id){
+  const all=[...WORLDS.anime,...WORLDS.cultivation,...WORLDS.fantasy,...WORLDS.games];
+  const w=all.find(x=>x.id===id);
+  if(!w) return;
+  $('wsearch').value=w.name;
+  hideSuggestions();
+  selectWorld(w);
+}
+
+function pickAISuggestion(name){
+  $('wsearch').value=name;
+  hideSuggestions();
+  doSearch();
+}
+
+function hideSuggestions(){
+  const box=$('suggestions');
+  if(box) box.style.display='none';
+}
+
+// Hide suggestions when clicking outside
+document.addEventListener('click',e=>{if(!e.target.closest('#wsearch')&&!e.target.closest('#suggestions'))hideSuggestions();});
 const WORLDS = {
   anime:[
     {id:'naruto',name:'Naruto',icon:'🍃',tag:'Shinobi · Chakra',genre:'Anime / Shinobi',lore:'Hidden ninja villages shaped by war and the Will of Fire. Chakra fuels jutsu requiring hand seals, training, and bloodline talent. Shinobi rank Genin → Chunin → Jonin → Kage. Bingo books list dangerous targets. Akatsuki hunts the tailed beasts.'},
@@ -470,7 +557,6 @@ const WORLDS = {
     {id:'jjk',name:'Jujutsu Kaisen',icon:'🔵',tag:'Cursed Energy · Sorcerer',genre:'Anime / Jujutsu',lore:'Cursed energy — negative emotion given form — produces Cursed Spirits. Jujutsu Sorcerers exorcise them via Cursed Techniques and Domain Expansions. Special Grade curses and rogue sorcerers threaten fragile peace.'},
     {id:'hxh',name:'Hunter x Hunter',icon:'🎯',tag:'Nen · Hunter',genre:'Anime / Nen',lore:'Hunters are licensed elite able to access restricted locations. Nen is life energy divided into Enhancement, Emission, Transmutation, Conjuration, Manipulation, and Specialization. Those who survive learning gain abilities that defy imagination.'},
     {id:'fma',name:'Fullmetal Alchemist',icon:'⚗',tag:'Alchemy · Brotherhood',genre:'Anime / Alchemy',lore:'Alchemy — the science of equivalent exchange — shapes military power. The Philosopher\'s Stone bypasses exchange at terrible human cost. Homunculi pull strings from the shadows. The truth lies beyond the Gate.'},
-    {id:'sololeveling',name:'Solo Leveling',icon:'🔪',tag:'Hunter · Shadow',genre:'Manhwa / Hunter',lore:'Gates appeared worldwide, releasing monsters. Humans awakened as Hunters ranked E through S. The Shadow Monarch ability raises fallen enemies as an undead army without limit.'},
   ],
   cultivation:[
     {id:'btth',name:'Battle Through the Heavens',icon:'🔥',tag:'Dou Qi · Xianxia',genre:'Cultivation / Xianxia',lore:'Dou Qi cultivation where strength is everything. Nine Dou Zhe stages ascending to Dou Di. Mysterious pills, ancient ruins, Heavenly Flames. The Pill Tower and Black-Corner Region war over dominance.'},
@@ -501,9 +587,19 @@ const WORLDS = {
     {id:'cyberpunk',name:'Cyberpunk 2077',icon:'🌃',tag:'Night City · Chrome',genre:'Science Fiction',lore:'Night City 2077 — neon, chrome, and corporate war. Cyberware replaces flesh for power. Gangs, megacorps, fixers, and Netrunners compete. Edgerunners live fast and almost never make it out whole.'},
     {id:'witcher3',name:'The Witcher 3',icon:'🐺',tag:'Open World · Geralt',genre:'Dark Fantasy',lore:'The Northern Kingdoms after the second Nilfgaard war. Geralt hunts monsters and searches for those he loves. The Wild Hunt rides between worlds. Skellige, Velen, Novigrad, and Toussaint each hold their own dangers.'},
     {id:'bg3',name:'Baldur\'s Gate 3',icon:'🧠',tag:'D&D 5e · Mind Flayer',genre:'High Fantasy',lore:'A tadpole implanted by Mind Flayers grants dark power and threatens transformation. The Sword Coast braces for invasion. Companions with their own agendas join the journey. Every choice reshapes who you become.'},
+  ],
+  manhwa:[
+    {id:'omniscient',name:'Omniscient Reader\'s Viewpoint',icon:'📖',tag:'Dokja · Scenarios',genre:'Manhwa / Apocalypse',lore:'Kim Dokja is the only reader of a novel that becomes reality. Scenarios from the 3rd turn force humanity to survive or die. Constellations wager on humans. Stigmas, skills, and coins define power in a world of stories made real.'},
+    {id:'sololeveling2',name:'Solo Leveling',icon:'🔪',tag:'Sung Jinwoo · Shadow',genre:'Manhwa / Hunter',lore:'Gates appeared worldwide, releasing monsters. Humans awakened as Hunters ranked E through S. Sung Jinwoo, the weakest E-rank, gains a unique System and becomes the Shadow Monarch — raising fallen enemies as an eternal undead army.'},
+    {id:'thebeginning',name:'The Beginning After the End',icon:'👑',tag:'Arthur · Reincarnation',genre:'Manhwa / Isekai',lore:'King Grey reincarnates into a world of magic with full memories. Mages and augmenters shape the Dicathen continent. Asuras and Vritra clash in wars between realms. Arthur Leywin walks between two worlds that both need him.'},
+    {id:'sclasses',name:'The S-Classes That I Raised',icon:'🌿',tag:'Han Yoojin · Regression',genre:'Manhwa / Hunter',lore:'Han Yoojin regresses with the ability to raise any hunter\'s potential. S-rank hunters — the rarest and most powerful — must be nurtured carefully. Dungeons, guilds, and hidden threats shape a world where rank is everything.'},
+    {id:'swordmaster',name:'Nano Machine',icon:'⚙',tag:'Martial Arts · Murim',genre:'Manhwa / Murim',lore:'A nano machine injected from the future awakens Cheon Yeo-Woon\'s latent martial talent in a brutal clan hierarchy. The Demonic Cult\'s succession war, ancient techniques, and hidden bloodlines intertwine in the Murim world.'},
+    {id:'loafing',name:'Volcanic Age',icon:'🌋',tag:'Regression · Murim',genre:'Manhwa / Murim',lore:'Joo Seo-Cheon regresses to his youth after surviving countless battles as an elder. With knowledge of future disasters, he cultivates faster, makes different alliances, and moves to prevent the catastrophe that destroys the Murim world.'},
+    {id:'returnofmage',name:'Return of the Mount Hua Sect',icon:'🌸',tag:'Chung Myung · Regression',genre:'Manhwa / Murim',lore:'Chung Myung, the greatest disciple of Mount Hua Sect, reincarnates 100 years later to find his sect in decline. Plum Blossom Sword techniques must be restored. The Demonic Cult still threatens. One regressor must rebuild a fallen legacy.'},
+    {id:'duchesslife',name:'Second Life Ranker',icon:'⏱',tag:'Yeon-woo · Tower',genre:'Manhwa / Tower',lore:'Yeon-woo enters a mysterious Tower to avenge his twin brother. Traits, skills, and Divine Factors accumulate as he climbs. Ancient gods, clans, and the legacy of the Hoarder await on each floor of an infinite challenge.'},
   ]
 };
-const TABS=['anime','cultivation','fantasy','games'];
+const TABS=['anime','cultivation','fantasy','games','manhwa'];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  STATE
