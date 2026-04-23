@@ -158,6 +158,7 @@
   .sf input:focus{outline:none;border-color:var(--accent);}
 
   .toast{position:fixed;bottom:22px;right:22px;background:var(--card);border:1px solid var(--border2);border-radius:var(--r);padding:10px 15px;font-size:13px;z-index:200;transform:translateY(70px);opacity:0;transition:all .22s;max-width:290px;pointer-events:none;}
+  .preset-pick{font-size:12px;padding:5px 10px;}.preset-pick.active{border-color:var(--accent);color:var(--accent);background:var(--accentG);}
   .toast.show{transform:translateY(0);opacity:1;}.toast.ok{border-color:var(--green);color:var(--green);}.toast.err{border-color:var(--red);color:var(--red);}
 
   /* AUTH */
@@ -285,8 +286,40 @@
         <textarea id="capp" rows="3" placeholder="How do you look? Build, features, hair, clothing, anything distinctive…"></textarea>
         <div class="hint">Used by the DM when NPCs describe you or you catch your reflection.</div>
       </div>
-      <div class="fg"><label>Backstory</label><textarea id="cback" rows="3" placeholder="Where did you come from? What shaped you before this story began?"></textarea></div>
+
+      <div class="fg">
+        <label>Backstory <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;">— or pick a preset</span></label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;" id="preset-btns">
+          <button class="btn btn-sm preset-pick" onclick="pickPreset('isekai')">🌀 Isekai'd</button>
+          <button class="btn btn-sm preset-pick" onclick="pickPreset('bandit')">🗡 Bandit</button>
+          <button class="btn btn-sm preset-pick" onclick="pickPreset('noble')">👑 Noble Heir</button>
+          <button class="btn btn-sm preset-pick" onclick="pickPreset('orphan')">🔥 Street Orphan</button>
+          <button class="btn btn-sm preset-pick" onclick="pickPreset('soldier')">⚔️ Veteran Soldier</button>
+          <button class="btn btn-sm preset-pick" onclick="pickPreset('merchant')">💰 Traveling Merchant</button>
+          <button class="btn btn-sm preset-pick" onclick="pickPreset('scholar')">📚 Disgraced Scholar</button>
+          <button class="btn btn-sm preset-pick" onclick="pickPreset('prodigy')">⚡ Fallen Prodigy</button>
+          <button class="btn btn-sm preset-pick" onclick="pickPreset('slave')">⛓ Escaped Slave</button>
+          <button class="btn btn-sm preset-pick" onclick="pickPreset('god')">✨ Reincarnated God</button>
+        </div>
+        <textarea id="cback" rows="3" placeholder="Where did you come from? What shaped you before this story began? (or pick a preset above)"></textarea>
+      </div>
+
       <div class="fg"><label>Personality</label><input type="text" id="cpers" placeholder="e.g. Cold and calculating, loyal to very few, hides ambition behind calm"></div>
+
+      <div class="fg" style="margin-top:6px;">
+        <label>Death Mode</label>
+        <div style="display:flex;gap:10px;margin-top:8px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r);flex:1;" id="mode-easy-lbl">
+            <input type="radio" name="deathmode" id="mode-easy" value="easy" checked onchange="selectMode(this)" style="accent-color:var(--accent);">
+            <div><div style="font-size:13px;font-weight:600;color:var(--text);">🛡 Easy Mode</div><div style="font-size:11px;color:var(--text3);">Death sets you back but you continue</div></div>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 14px;border:1px solid var(--border);border-radius:var(--r);flex:1;" id="mode-perm-lbl">
+            <input type="radio" name="deathmode" id="mode-perm" value="permadeath" onchange="selectMode(this)" style="accent-color:var(--red);">
+            <div><div style="font-size:13px;font-weight:600;color:var(--text);">💀 Permadeath</div><div style="font-size:11px;color:var(--text3);">Die and the world is gone forever</div></div>
+          </label>
+        </div>
+      </div>
+
       <div style="display:flex;justify-content:flex-end;margin-top:26px;gap:9px;">
         <button class="btn" onclick="nav('pick-world')">← Back</button>
         <button class="btn btn-p" id="begin-btn" onclick="createAndBegin()">Begin Adventure ↵</button>
@@ -831,8 +864,35 @@ function useCustomDesc(){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function goToChar(){if(!selWorld)return;$('char-title').textContent=(selWorld.icon||'🌐')+' '+selWorld.name;$('cname').value='';$('capp').value='';$('cback').value='';$('cpers').value='';nav('create-char');}
 
+const PRESETS={
+  isekai:{back:'A regular person from modern Earth who died suddenly and woke up in this world with no explanation, no special powers, and only their real-world knowledge to rely on.',pers:'Analytical, adaptable, secretly terrified but hiding it well'},
+  bandit:{back:'A highway robber and low-level criminal who has survived by taking from others. No loyalty to anyone, a few too many enemies, and a reputation that closes more doors than it opens.',pers:'Cunning, opportunistic, surprisingly principled about certain things'},
+  noble:{back:'Born into wealth and privilege but has recently lost nearly everything — title contested, fortune seized, family name in disgrace. Starting over with nothing but education and old contacts.',pers:'Proud, strategic, deeply uncomfortable with their new circumstances'},
+  orphan:{back:'Grew up on the streets with no family, no name worth mentioning, and a talent for surviving situations that should have killed them. Learned to read people fast and trust them slow.',pers:'Streetwise, fiercely independent, protective of those weaker than them'},
+  soldier:{back:'A veteran of wars they no longer believe in, discharged or deserted after one order too many. Carries skill, scars, and the specific exhaustion of someone who has seen what people do to each other.',pers:'Disciplined, cynical, deeply loyal once trust is earned'},
+  merchant:{back:'A traveling trader who has seen more of the world than most but owns less of it than expected. Every deal has a story, half of them uncomfortable. Currently between fortunes.',pers:'Charming, calculating, reads rooms like balance sheets'},
+  scholar:{back:'Once a respected academic or intellectual, now fallen from grace after a discovery or statement that made powerful people uncomfortable. The knowledge remains. The position does not.',pers:'Precise, curious, quietly furious about the injustice of it'},
+  prodigy:{back:'Showed extraordinary talent from a young age, rose fast, then crashed harder. A mistake, a betrayal, or bad luck stripped everything away. Starting again with all the skill and none of the support.',pers:'Driven, perfectionist, struggling with the gap between who they were and who they are now'},
+  slave:{back:'Born into bondage or captured young, recently escaped with nothing but a direction: away. Has never made a choice about their own life until now. Every decision feels enormous.',pers:'Watchful, intensely observant, learning what freedom actually means'},
+  god:{back:'A divine being or enormously powerful entity who died, was sealed, or chose to reincarnate in mortal form. Memories fragmented, powers locked, but something of the original self remains beneath the surface.',pers:'Ancient perspective trapped in new circumstances, calm about things that should be terrifying'}
+};
+
+function pickPreset(key){
+  const p=PRESETS[key];if(!p)return;
+  $('cback').value=p.back;
+  if(!$('cpers').value)$('cpers').value=p.pers;
+  document.querySelectorAll('.preset-pick').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+function selectMode(radio){
+  $('mode-easy-lbl').style.borderColor=radio.value==='easy'?'var(--accent)':'var(--border)';
+  $('mode-perm-lbl').style.borderColor=radio.value==='permadeath'?'var(--red)':'var(--border)';
+}
+
 async function createAndBegin(){
   const name=$('cname').value.trim(),app=$('capp').value.trim(),back=$('cback').value.trim(),pers=$('cpers').value.trim();
+  const deathMode=document.querySelector('input[name="deathmode"]:checked')?.value||'easy';
   if(!name){toast('Enter a character name','err');return;}
   if(!selWorld){toast('No world selected','err');return;}
   const {api}=cfg();if(!api){toast('Add your API key in Settings','err');openSettings();return;}
@@ -878,7 +938,7 @@ starting_time: One of Dawn/Morning/Afternoon/Evening/Night.
 currency_name: The actual in-world currency (e.g. Berries, Ryo, Zeni).
 starting_currency: INTEGER based on character backstory. homeless=0, poor=10-50, commoner=100-500, skilled=2000-10000, wealthy=10000+.
 starting_hp: INTEGER based on physical description. Average=100, athletic=120-150, sickly=50-80, exceptional=150-200.`,
-      [{role:'user',content:`World: ${selWorld.name}\nGenre: ${selWorld.genre}\nCANON REFERENCE: ${arcCtx||selWorld.lore||'Use best available knowledge'}\nCharacter: ${name}\nAppearance: ${app||'Not described'}\nBackstory: ${back||'Unknown past'}\nPersonality: ${pers||'Not described'}`}], 1200);
+      [{role:'user',content:`World: ${selWorld.name}\nGenre: ${selWorld.genre}\nCANON REFERENCE: ${arcCtx||selWorld.lore||'Use best available knowledge'}\nCharacter: ${name}\nAppearance: ${app||'Not described'}\nBackstory: ${back||'Unknown past'}\nPersonality: ${pers||'Not described'}\nDeath Mode: ${deathMode==='permadeath'?'PERMADEATH — if HP reaches 0 the character dies permanently and the world ends. Make death real and consequential. Near-death should feel genuinely dangerous.':'EASY MODE — if HP reaches 0 the character is incapacitated and wakes up later with consequences but survives. Death is a setback not an ending.'}\nCreative Freedom: The player has FULL creative freedom to do anything they choose. Never refuse a player action or tell them they cannot do something. If they attempt something wild, use the dice roll outcome to determine how it goes — success, failure, or consequence — but always engage with what they are trying to do.`}], 1200);
 
     const gen=JSON.parse(raw.replace(/```json|```/g,'').trim());
     const dmPr=gen.dm_prompt||`You are the DM of ${selWorld.name}. Narrate in second person. Character: ${name}. Embed stat changes using provided tags.`;
@@ -891,7 +951,7 @@ starting_hp: INTEGER based on physical description. Average=100, athletic=120-15
     const [world]=await sbP('worlds',{world_name:selWorld.name,genre:selWorld.genre,dm_system_prompt:dmPr,canon_rules:fullCanon,user_id:currentUser?.id||null});
     const wid=world.id;
     await sbP('game_state',{world_id:wid,hp:startingHp,berry:startingCurrency,power_stage:'Unknown',current_day:1,current_location:gen.starting_location||selWorld.name,current_time_of_day:gen.starting_time||'Morning'});
-    await sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}|CUR:${gen.currency_name||'Gold'}|ARC:${detectedArc}`});
+    await sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}|CUR:${gen.currency_name||'Gold'}|ARC:${detectedArc}|DEATH:${deathMode}`});
     toast('World created!','ok');enterWorld(wid,true);
   }catch(e){toast(e.message,'err');btn.disabled=false;btn.innerHTML='Begin Adventure ↵';}
 }
@@ -1137,6 +1197,14 @@ function buildCtx(gs,ps,orders,inv,al,canon){
   if(inv?.length)p.push('\n=== INVENTORY ===\n'+inv.map(i=>`${i.item_name} x${i.quantity} [${i.status}]${i.notes?' — '+i.notes:''}`).join('\n'));
   if(al?.length)p.push('\n=== ALLIES ===\n'+al.map(a=>`${a.name} (${a.relationship}) — ${a.status}`).join('\n'));
   if(canon)p.push('\n=== WORLD CANON ===\n'+canon);
+  if(ps?.notes){
+    const deathM=ps.notes.match(/DEATH:([^|$\n]+)/);
+    const deathMode=deathM?deathM[1].trim():'easy';
+    p.push(`\n=== DEATH MODE: ${deathMode.toUpperCase()} ===`);
+    if(deathMode==='permadeath') p.push('If HP reaches 0: character dies permanently. This world ends. Make it count — death should feel real and earned.');
+    else p.push('If HP reaches 0: character is incapacitated, wakes up later with consequences. Death is a setback, not an ending.');
+  }
+  p.push('\n=== CREATIVE FREEDOM ===\nThe player has FULL creative freedom. NEVER refuse a player action or say they cannot do something. If they attempt anything — no matter how wild, risky, or unconventional — engage with it fully. Use dice outcomes to determine results. Every action has consequences but nothing is off-limits.');
   p.push(`\n=== NARRATOR RULES ===
 NEVER write choice menus, [A]/[B]/[C] options, numbered action lists, or "Your options are:" prompts. The interface generates choices automatically.
 STRICT IMMERSION — CRITICAL:
@@ -1146,21 +1214,17 @@ STRICT IMMERSION — CRITICAL:
 - NEVER use your knowledge of the source material's storyline to narrate events that haven't occurred yet in this playthrough.
 - NEVER get character facts wrong — gender, appearance, name, abilities must match canon exactly.
 - Canon characters in the world exist as they are at this point in the story — do not reference their future actions or destiny.
-- If Zoro is tied to a post, he is tied to a post. He is not "waiting for someone." He does not know anyone is coming. Narrate only what is observable.
-- CANON CHARACTER PLACEMENT — CRITICAL: Characters must only appear in locations where they actually are at this point in the story. Do NOT place characters in locations they haven't reached yet. Bartolomeo, Crocus, and other characters who aren't present in the current arc CANNOT appear. Only characters who are canonically present in this specific arc and location are allowed to exist in scenes. If you are unsure whether a character belongs in a scene, do not include them.
+- CANON CHARACTER PLACEMENT: Characters must only appear in locations where they actually are at this point in the story. If unsure whether a character belongs in a scene, leave them out.
 - The player character discovers the world through play, not through narrator omniscience.
 CONTINUITY — CRITICAL:
 - Read the full conversation history before every response. The story must continue from exactly where it left off.
 - NEVER reset a scene, re-introduce a character the player has already met, or repeat information already established.
-- If the player already spoke to Zoro, Zoro knows the player exists. Do not describe meeting him again.
-- If the player is already tied up in the courtyard, they are still tied up. Do not move them back to the street.
 - Track what has happened and what has been said. Build forward, never backward.
-- If a character said something 3 turns ago, they said it. It happened. Continue from that reality.
-ARC TRANSITIONS: When the story naturally moves into a new arc or saga, include [NEW_ARC: arc name] in your response. The system will automatically search and load that arc's canon details. Only use this when a major story transition actually occurs — not every scene.
-[REMEMBER: fact] — saves a key fact to permanent memory (use for: deals made, secrets learned, enemies identified, important NPCs met, locations discovered, obligations taken on). Keep the fact short and clear. Only use when genuinely important — not every turn. Examples: [REMEMBER: Made a deal with Coby to stay quiet about the Marine patrol] [REMEMBER: Zoro is being held at the Marine base on the east road] [REMEMBER: Luffy offered to let you join his crew]`);
-
+ARC TRANSITIONS: When the story moves into a new arc, include [NEW_ARC: arc name]. Only use when a major transition actually occurs.
+MEMORY TAGS: [REMEMBER: fact] — saves important facts to permanent memory. Only use when genuinely important.`);
   return p.join('\n');
 }
+
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  STAT PARSING
@@ -1174,6 +1238,17 @@ async function parseStats(text){
   if(hp)u.hp=parseInt(hp);if(berry)u.berry=parseInt(berry);if(day)u.current_day=parseInt(day);
   if(loc)u.current_location=loc;if(time)u.current_time_of_day=time;if(stage)u.power_stage=stage;
   if(Object.keys(u).length){try{await sbPa('game_state',`world_id=eq.${curWorldId}`,u);Object.assign(curGS,u);updateSB();}catch(e){}}
+
+  // Death handling
+  if(hp&&parseInt(hp)<=0&&curPS){
+    const deathM=curPS.notes?.match(/DEATH:([^|$\n]+)/);
+    const deathMode=deathM?deathM[1].trim():'easy';
+    if(deathMode==='permadeath'){
+      setTimeout(()=>handlePermadeath(),2000);
+    } else {
+      setTimeout(()=>handleEasyDeath(),1500);
+    }
+  }
   const pn=m(/\[POWER_SYSTEM:\s*([^\]]+)\]/i),pl=m(/\[POWER_LEVEL:\s*([^\]]+)\]/i);
   if(pn||pl){const pu={};if(pn){pu.system_name=pn;if(curPS)curPS.system_name=pn;}if(pl){pu.current_level=pl;if(curPS)curPS.current_level=pl;}try{await sbPa('power_system',`world_id=eq.${curWorldId}`,pu);updateSB();}catch(e){}}
   // VS Battles tags
@@ -1185,6 +1260,44 @@ async function parseStats(text){
   // Arc transition detection
   const newArc=m(/\[NEW_ARC:\s*([^\]]+)\]/i);
   if(newArc) loadNewArc(newArc);
+}
+
+async function handlePermadeath(){
+  $('game-log').innerHTML='';
+  addSys('💀 YOU HAVE DIED');
+  addSys('This world is gone. Your story ended here.');
+  const el=document.createElement('div');
+  el.style.cssText='display:flex;flex-direction:column;align-items:center;gap:12px;padding:40px 20px;';
+  el.innerHTML=`<div style="font-size:48px;">💀</div>
+    <div style="font-size:18px;font-weight:700;color:var(--red);">PERMADEATH</div>
+    <div style="font-size:13px;color:var(--text3);text-align:center;max-width:300px;">Your adventure in this world has ended permanently. The choices you made led here.</div>
+    <button class="btn btn-p" onclick="deleteWorldAndLeave()">Accept Death & Return Home</button>`;
+  $('game-log').appendChild(el);
+}
+
+async function deleteWorldAndLeave(){
+  if(!curWorldId)return;
+  try{
+    for(const t of ['conversation_history','inventory','standing_orders','power_system','allies','game_state'])
+      await sbD(t,`world_id=eq.${curWorldId}`).catch(()=>{});
+    await sbD('worlds',`id=eq.${curWorldId}`);
+  }catch(e){}
+  curWorldId=null;cachedWorld=null;cachedOrders=null;
+  goHome();
+}
+async function handleEasyDeath(){
+  // Restart at beginning of current arc
+  const arcM=curPS?.notes?.match(/ARC:([^|$\n]+)/);
+  const arcName=arcM?arcM[1].trim():'current arc';
+  $('game-log').innerHTML='';
+  addSys(`💀 You have fallen… but this is not the end.`);
+  addSys(`You wake up at the start of the ${arcName}. Battered. Alive. The story continues.`);
+  // Reset HP, clear conversation history, restart the arc
+  await sbPa('game_state',`world_id=eq.${curWorldId}`,{hp:50});
+  if(curGS)curGS.hp=50;
+  await sbD('conversation_history',`world_id=eq.${curWorldId}`).catch(()=>{});
+  updateSB();
+  setTimeout(()=>enterWorld(curWorldId,true),1500);
 }
 
 async function loadNewArc(arcName){
