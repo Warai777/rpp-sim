@@ -284,6 +284,7 @@
 </div>
 
 <!-- STEP 2: CHARACTER -->
+<!-- FIX 1: Clean HTML structure — single fg div, no orphaned buttons, preset-btns empty on load -->
 <div id="create-char" class="screen">
   <div class="topbar"><span class="logo" id="char-title">Create Character</span><button class="btn btn-sm" onclick="nav('pick-world')">← Back</button></div>
   <div style="flex:1;overflow-y:auto;">
@@ -302,12 +303,8 @@
 
       <div class="fg">
         <label>Backstory <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;">— or pick a preset</span></label>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;" id="preset-btns">
-          <button class="btn btn-sm preset-pick" onclick="pickPreset('isekai')">🌀 Isekai'd</button>
-        </div>
-        <div id="preset-loading" style="display:none;font-size:11px;color:var(--text3);margin-bottom:8px;"><span class="spin" style="width:10px;height:10px;border-width:2px;"></span> Loading world presets…</div>
-          <button class="btn btn-sm preset-pick" onclick="pickPreset('god')">✨ Reincarnated God</button>
-        </div>
+        <div id="preset-loading" style="display:none;font-size:11px;color:var(--text3);margin-bottom:8px;align-items:center;gap:6px;"><span class="spin" style="width:10px;height:10px;border-width:2px;"></span> Loading world presets…</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;" id="preset-btns"></div>
         <textarea id="cback" rows="3" placeholder="Where did you come from? What shaped you before this story began? (or pick a preset above)"></textarea>
       </div>
 
@@ -514,12 +511,10 @@ async function generatePortrait(appearance, worldName, statusEffects=[]){
   loading.style.display='flex';
 
   try{
-    // Build a detailed prompt from character appearance + status effects
     const statusDesc=statusEffects.length?`, ${statusEffects.join(', ')}`:'';
     const prompt=`anime art style, detailed character portrait, ${appearance}${statusDesc}, ${worldName} universe art style, dramatic lighting, high quality, upper body shot`;
     currentPortraitPrompt=prompt;
 
-    // Use Pollinations AI — completely free, no key needed
     const encoded=encodeURIComponent(prompt);
     const url=`https://image.pollinations.ai/prompt/${encoded}?width=400&height=500&nologo=true&model=flux`;
 
@@ -566,27 +561,24 @@ async function regenPortrait(){
   await generatePortrait(appearance, world, portraitStatuses);
 }
 
-// Parse status effects from DM text and update portrait if needed
 function parseStatusEffects(dmText){
   const statusKeywords=['poisoned','injured','bleeding','burned','exhausted','enraged','angry','cursed','armored','scarred','empowered'];
   const found=[];
   const lower=dmText.toLowerCase();
   statusKeywords.forEach(s=>{if(lower.includes(s))found.push(s);});
 
-  // Check HP for injury status
   if(curGS?.hp<50&&!found.includes('injured')) found.push('injured');
   if(curGS?.hp<20&&!found.includes('bleeding')) found.push('bleeding');
 
-  // Only regenerate if statuses changed significantly
   const newStatuses=JSON.stringify(found.sort());
   const oldStatuses=JSON.stringify(portraitStatuses.sort());
   if(newStatuses!==oldStatuses){
     portraitStatuses=found;
     updateStatusBadges(found);
-    // Regenerate portrait if statuses changed
     if(found.length!==portraitStatuses.length) regenPortrait();
   }
 }
+
 let suggestTimer=null;
 
 function getAllWorlds(){
@@ -598,7 +590,6 @@ function onSearchInput(val){
   const q=val.trim().toLowerCase();
   if(q.length<2){hideSuggestions();return;}
 
-  // Instantly show preset matches
   const matches=getAllWorlds().filter(w=>
     w.name.toLowerCase().includes(q)||
     w.tag.toLowerCase().includes(q)||
@@ -606,7 +597,6 @@ function onSearchInput(val){
   );
   showSuggestions(matches.slice(0,6), q, matches.length<6);
 
-  // After 600ms fire AI suggestions for anything not in presets
   if(matches.length<4) suggestTimer=setTimeout(()=>fetchAISuggestions(q, matches),600);
 }
 
@@ -669,8 +659,8 @@ function hideSuggestions(){
   if(box) box.style.display='none';
 }
 
-// Hide suggestions when clicking outside
 document.addEventListener('click',e=>{if(!e.target.closest('#wsearch')&&!e.target.closest('#suggestions'))hideSuggestions();});
+
 const WORLDS = {
   anime:[
     {id:'naruto',name:'Naruto',icon:'🍃',tag:'Shinobi · Chakra',genre:'Anime / Shinobi',lore:'Hidden ninja villages shaped by war and the Will of Fire. Chakra fuels jutsu requiring hand seals, training, and bloodline talent. Shinobi rank Genin → Chunin → Jonin → Kage. Bingo books list dangerous targets. Akatsuki hunts the tailed beasts.'},
@@ -854,7 +844,6 @@ function enterApp(){
   nav('home');loadWorlds();
 }
 
-// Auto-refresh token when expired
 async function refreshToken(){
   if(!currentUser?.refresh){doLogout();throw new Error('Session expired — please sign in again.');}
   const {url,key}=cfg();
@@ -872,7 +861,6 @@ async function refreshToken(){
   }catch(e){doLogout();throw new Error('Session expired — please sign in again.');}
 }
 
-// Supabase requests with auto token refresh
 function sb(path,method='GET',body=null){
   const {url,key}=cfg();
   if(!url||!key)throw new Error('Supabase not configured — open Settings.');
@@ -882,7 +870,6 @@ function sb(path,method='GET',body=null){
     return fetch(url.replace(/\/$/,'')+'/rest/v1/'+path,opts).then(async r=>{
       const t=await r.text();
       if(!r.ok){
-        // If JWT expired, refresh and retry once
         if(t.includes('JWT expired')||t.includes('PGRST303')){
           return refreshToken().then(()=>doReq(currentUser.token));
         }
@@ -914,7 +901,6 @@ async function callAI(system, messages, maxTokens=1000){
   return d.content?.[0]?.text||'';
 }
 
-// Streaming version — text appears in real time as AI generates it
 async function callAIStream(system, messages, maxTokens=1000, onChunk=null){
   const {api}=cfg();
   if(!api)throw new Error('No API key — open Settings.');
@@ -948,7 +934,6 @@ async function callAIStream(system, messages, maxTokens=1000, onChunk=null){
   return full;
 }
 
-// Strip stat tags from display text
 function stripStatTags(text){
   return text
     .replace(/\[HP:\s*-?\d+\]/gi,'')
@@ -969,7 +954,6 @@ function stripStatTags(text){
     .trim();
 }
 
-// Render markdown to HTML for display
 function renderMarkdown(text){
   return text
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -980,7 +964,6 @@ function renderMarkdown(text){
     .replace(/\n/g,'<br>');
 }
 
-// Stream narrator text directly — no auto-scroll, player controls reading
 async function streamDM(system, messages, maxTokens=2000){
   const ty=$('game-log').querySelector('.le-d:last-child .ty');
   if(ty)ty.closest('.le-d')?.remove();
@@ -999,7 +982,6 @@ async function streamDM(system, messages, maxTokens=2000){
     const display=stripStatTags(fullSoFar);
     lb.innerHTML=renderMarkdown(display);
     lb.appendChild(cursor);
-    // No auto-scroll — player reads at their own pace
   });
 
   cursor.remove();
@@ -1020,9 +1002,6 @@ function toast(msg,type=''){const t=$('toast');t.textContent=msg;t.className='to
 function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):''; }
 function grow(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  TYPEWRITER (used for non-streamed messages only)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function typewrite(el, text, speed=8){
   return new Promise(resolve=>{
     let i=0;
@@ -1042,7 +1021,6 @@ async function loadWorlds(){
   const c=$('home-content'),{url,key}=cfg();
   if(!url||!key){c.innerHTML=`<div class="empty"><div style="font-size:30px;opacity:.3;margin-bottom:12px;">⚙</div><p style="font-size:15px;margin-bottom:8px;">Setup Required</p><p style="font-size:13px;margin-bottom:18px;">Configure your API keys to begin</p><button class="btn btn-p" onclick="openSettings()">Open Settings</button></div>`;return;}
   c.innerHTML='<div class="empty"><span class="spin"></span></div>';
-  // Timeout so spinner never hangs forever
   const timeout=setTimeout(()=>{c.innerHTML=`<div class="empty"><p style="color:var(--red);margin-bottom:8px;">Connection timed out</p><p style="font-size:12px;color:var(--text3);margin-bottom:14px;">URL: ${esc(url.slice(0,40))}…</p><button class="btn btn-sm" onclick="openSettings()">Check Settings</button><button class="btn btn-sm" onclick="loadWorlds()" style="margin-left:8px;">Retry</button></div>`;},8000);
   try{
     const uid=currentUser?.id||'';
@@ -1138,11 +1116,12 @@ function goToChar(){
 
 let worldPresetData={};
 
+// FIX 2: generateWorldPresets — clean btn population, use __ separator in keys, pass `this`
 async function generateWorldPresets(world){
-  const btn=$('preset-btns');
+  const btns=$('preset-btns');
   const loading=$('preset-loading');
-  // Always keep Isekai as first option
-  btn.innerHTML=`<button class="btn btn-sm preset-pick" onclick="pickDynPreset('isekai_${world.id}')">🌀 Isekai'd</button>`;
+  // Show isekai placeholder while loading
+  btns.innerHTML=`<button class="btn btn-sm preset-pick" onclick="pickDynPreset('isekai__${world.id}',this)">🌀 Isekai'd</button>`;
   loading.style.display='flex';
   try{
     const raw=await callAI(`Generate 6 character backstory presets that fit the world of ${world.name} (${world.genre}).
@@ -1151,57 +1130,57 @@ Return ONLY raw JSON array — no markdown:
 Each preset must be grounded in ${world.name} lore — reference actual factions, locations, roles from this world. Examples for One Piece: Marine deserter, failed pirate, East Blue fisherman, bounty hunter. For Naruto: Academy dropout, missing-nin, civilian with a secret, clan heir. Make them varied and interesting starting points.`,
     [{role:'user',content:`World: ${world.name}\nGenre: ${world.genre}\nLore: ${world.lore?.slice(0,300)||''}`}],600);
     const presets=JSON.parse(raw.replace(/```json|```/g,'').trim());
-    worldPresetData[world.id]=presets;
-    // Add Isekai preset
-    worldPresetData[world.id].unshift({
-      label:"Isekai'd",icon:'🌀',
-      back:`A person from modern Earth who died and woke up in the world of ${world.name} with no explanation, no powers, and only their real-world knowledge to rely on.`,
-      pers:'Analytical, adaptable, secretly terrified but hiding it well'
-    });
-    btn.innerHTML=presets.map((p,i)=>
-      `<button class="btn btn-sm preset-pick" onclick="pickDynPreset('${world.id}_${i}')">${p.icon} ${p.label}</button>`
+    // Store with isekai at index 0
+    worldPresetData[world.id]=[
+      {label:"Isekai'd",icon:'🌀',
+       back:`A person from modern Earth who died and woke up in the world of ${world.name} with no explanation, no powers, and only their real-world knowledge to rely on.`,
+       pers:'Analytical, adaptable, secretly terrified but hiding it well'},
+      ...presets
+    ];
+    // Render all buttons — __ separator avoids splitting on worldId underscores; pass `this`
+    btns.innerHTML=worldPresetData[world.id].map((p,i)=>
+      `<button class="btn btn-sm preset-pick" onclick="pickDynPreset('${world.id}__${i}',this)">${p.icon} ${p.label}</button>`
     ).join('');
   }catch(e){
-    // Fallback to generic presets if AI fails
-    btn.innerHTML=`
-      <button class="btn btn-sm preset-pick" onclick="pickDynPreset('isekai_${world.id}')">🌀 Isekai'd</button>
-      <button class="btn btn-sm preset-pick" onclick="pickDynPreset('generic_bandit')">🗡 Bandit</button>
-      <button class="btn btn-sm preset-pick" onclick="pickDynPreset('generic_orphan')">🔥 Street Orphan</button>
-      <button class="btn btn-sm preset-pick" onclick="pickDynPreset('generic_soldier')">⚔️ Soldier</button>
-      <button class="btn btn-sm preset-pick" onclick="pickDynPreset('generic_noble')">👑 Noble</button>`;
+    // Fallback generic presets
+    worldPresetData[world.id]=[
+      {label:"Isekai'd",icon:'🌀',back:`A person from modern Earth who died and woke up in ${world.name} with no explanation, no powers, and only their real-world knowledge to rely on.`,pers:'Analytical, adaptable, secretly terrified but hiding it well'},
+      {label:'Bandit',icon:'🗡',back:PRESETS.bandit.back,pers:PRESETS.bandit.pers},
+      {label:'Street Orphan',icon:'🔥',back:PRESETS.orphan.back,pers:PRESETS.orphan.pers},
+      {label:'Soldier',icon:'⚔️',back:PRESETS.soldier.back,pers:PRESETS.soldier.pers},
+      {label:'Noble',icon:'👑',back:PRESETS.noble.back,pers:PRESETS.noble.pers},
+    ];
+    btns.innerHTML=worldPresetData[world.id].map((p,i)=>
+      `<button class="btn btn-sm preset-pick" onclick="pickDynPreset('${world.id}__${i}',this)">${p.icon} ${p.label}</button>`
+    ).join('');
   }
   loading.style.display='none';
 }
 
-function pickDynPreset(key){
-  // Handle isekai special case
-  if(key.startsWith('isekai_')){
-    const worldId=key.replace('isekai_','');
+// FIX 3: pickDynPreset — accepts `el` param, uses __ separator for safe splitting
+function pickDynPreset(key, el){
+  // Handle legacy isekai__ key from the initial placeholder button
+  if(key.startsWith('isekai__')){
+    const worldId=key.replace('isekai__','');
     const world=getAllWorlds().find(w=>w.id===worldId)||selWorld;
     $('cback').value=`A person from modern Earth who died and woke up in ${world?.name||'this world'} with no explanation, no powers, and only their real-world knowledge to rely on.`;
     if(!$('cpers').value)$('cpers').value='Analytical, adaptable, secretly terrified but hiding it well';
     document.querySelectorAll('.preset-pick').forEach(b=>b.classList.remove('active'));
-    event.target.classList.add('active');
+    if(el)el.classList.add('active');
     return;
   }
-  // Handle generic fallbacks
-  if(key.startsWith('generic_')){
-    const type=key.replace('generic_','');
-    if(PRESETS[type]){$('cback').value=PRESETS[type].back;if(!$('cpers').value)$('cpers').value=PRESETS[type].pers;}
-    document.querySelectorAll('.preset-pick').forEach(b=>b.classList.remove('active'));
-    event.target.classList.add('active');
-    return;
-  }
-  // Handle world-specific presets
-  const [worldId,indexStr]=key.split('_');
+  // key format: worldId__index  (double underscore — worldIds never contain __)
+  const sep=key.lastIndexOf('__');
+  if(sep===-1)return;
+  const worldId=key.slice(0,sep);
+  const index=parseInt(key.slice(sep+2));
   const presets=worldPresetData[worldId];
-  if(!presets) return;
-  const p=presets[parseInt(indexStr)];
-  if(!p) return;
+  if(!presets||isNaN(index)||!presets[index])return;
+  const p=presets[index];
   $('cback').value=p.back;
   if(!$('cpers').value)$('cpers').value=p.pers;
   document.querySelectorAll('.preset-pick').forEach(b=>b.classList.remove('active'));
-  event.target.classList.add('active');
+  if(el)el.classList.add('active');
 }
 
 const PRESETS={
@@ -1238,7 +1217,6 @@ async function createAndBegin(){
   const {api}=cfg();if(!api){toast('Add your API key in Settings','err');openSettings();return;}
   const btn=$('begin-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Building world…';
   try{
-    // Step 1: Single combined search — detect arc and load its details in one call
     btn.innerHTML='<span class="spin"></span> Loading world lore…';
     const searchRes=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
@@ -1265,7 +1243,6 @@ canon_details: 2 paragraphs max — characters in this arc (name/gender/key abil
     if(arcDetails) toast(`✓ ${detectedArc} loaded`,'ok');
     const arcCtx=`CURRENT ARC: ${detectedArc}\n${arcDetails}`;
 
-    // Step 2: Generate DM prompt with canon details injected
     btn.innerHTML='<span class="spin"></span> Building world…';
     const raw=await callAI(`Generate a DM system prompt and world config for a text RPG. Return ONLY raw JSON (no markdown):
 {"dm_prompt":"...","canon_rules":"...","starting_location":"...","starting_time":"Morning","currency_name":"...","starting_currency":100,"starting_hp":100}
@@ -1284,8 +1261,6 @@ starting_hp: INTEGER based on physical description. Average=100, athletic=120-15
     const dmPr=gen.dm_prompt||`You are the DM of ${selWorld.name}. Narrate in second person. Character: ${name}. Embed stat changes using provided tags.`;
     const startingCurrency=parseInt(gen.starting_currency)||100;
     const startingHp=parseInt(gen.starting_hp)||100;
-
-    // Store canon details in canon_rules for use every turn
     const fullCanon=(gen.canon_rules||'')+(arcDetails?'\n\nCANON REFERENCE:\n'+arcDetails:'');
 
     const [world]=await sbP('worlds',{world_name:selWorld.name,genre:selWorld.genre,dm_system_prompt:dmPr,canon_rules:fullCanon,user_id:currentUser?.id||null});
@@ -1309,13 +1284,11 @@ async function enterWorld(wid,opening=false){
     const nm=ps?.notes?.match(/N:([^|]+)/);const ap=ps?.notes?.match(/A:([^|]+)/);const cn=nm?nm[1].trim():'Adventurer';
     $('sb-name').textContent=cn;$('sb-arch').textContent=ap?ap[1].trim():'—';
     updateSB();checkMob();
-    // set shop currency label — try stored CUR: first, then derive from world name
     const curM2=ps?.notes?.match(/CUR:([^|$\n]+)/);
     let shopCur=getCurrency();
     $('shop-currency').textContent=shopCur;
     $('sb-cur-label').textContent=shopCur;
 
-    // Generate character portrait
     const pap=ps?.notes?.match(/A:([^|]+)/);
     if(pap){
       portraitStatuses=[];
@@ -1327,7 +1300,6 @@ async function enterWorld(wid,opening=false){
       if(hist?.length){
         $('game-log').innerHTML='';
         hist.forEach(m=>m.role==='user'?addP(m.content,false):addD(m.content,false,false));
-        // Regenerate options from the last DM message
         const lastDM=[...hist].reverse().find(m=>m.role==='assistant');
         const lastPlayer=[...hist].reverse().find(m=>m.role==='user');
         if(lastDM) genOptions(lastDM.content, world, lastPlayer?.content||'');
@@ -1355,7 +1327,6 @@ function leaveGame(){curWorldId=null;cachedWorld=null;cachedOrders=null;goHome()
 function updateSB(){
   const g=curGS,p=curPS;if(!g)return;
   $('s-hp').textContent=g.hp??'—';
-  // Show currency amount — label already set to world currency name
   $('s-berry').textContent=g.berry!=null?Number(g.berry).toLocaleString():'—';
   $('s-loc').textContent=g.current_location||'—';$('s-day').textContent=g.current_day||1;
   $('s-time').textContent=g.current_time_of_day||'—';$('s-prog').textContent=g.power_stage||'—';
@@ -1380,11 +1351,9 @@ function toggleDice(){
 
 function isDialogue(text){
   const t=text.trim();
-  // Dialogue: starts with quote, or starts with "say/tell/ask/whisper/shout" etc, or is conversational
   if(t.startsWith('"')||t.startsWith("'")) return true;
   const dialogueWords=/^(say|tell|ask|whisper|shout|reply|respond|answer|call out|greet|introduce|explain|mention|admit|deny|confess|warn|joke|laugh|smile and say|nod and say)/i;
   if(dialogueWords.test(t)) return true;
-  // Short conversational phrases unlikely to need dice
   if(t.length<60&&!/attack|fight|run|jump|climb|grab|steal|hide|sneak|punch|kick|dodge|block|shoot|throw|break|force|push|pull|lift|cut|stab|slash/i.test(t)) return true;
   return false;
 }
@@ -1410,7 +1379,6 @@ function showRoll(roll,outcome,color){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  SEND ACTION
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Cache world + standing orders — these rarely change mid-session
 let cachedWorld=null, cachedOrders=null;
 
 async function sendAction(text){
@@ -1439,9 +1407,7 @@ async function sendAction(text){
     const gs=curGS, ps=curPS;
 
     const diceCtx=shouldRoll?`\n=== DICE ROLL ===\nThe player rolled a d20: ${roll}/20 — ${outcome}.\nNarrate the outcome of their action reflecting this roll. Critical Success (20) = extraordinary result. Success (15-19) = clean achievement. Partial Success (10-14) = achieved with complication. Failure (5-9) = action fails. Critical Failure (1-4) = fails badly with consequences.`:'';
-
     const itemCtx=inv?.length?`\n=== ITEM CONSUMPTION ===\nIf the player uses or consumes an item from their inventory, include [USE_ITEM: exact item name] in your response.`:'';
-
     const ctx=buildCtx(gs,ps,orders,inv,al,world.canon_rules)+diceCtx+itemCtx;
     const msgs=[];if(hist?.length)[...hist].reverse().forEach(m=>msgs.push({role:m.role,content:m.content}));msgs.push({role:'user',content:text});
     ty.remove();
@@ -1456,7 +1422,7 @@ async function sendAction(text){
     consumeItems(dm, inv);
     autoRemember(dm);
     parseStatusEffects(dm);
-    genOptions(dm, world, text); // pass player action for context
+    genOptions(dm, world, text);
   }catch(e){ty.remove();addSys('Error: '+e.message);}
   finally{busy=false;$('send-btn').disabled=false;}
 }
@@ -1495,17 +1461,16 @@ async function autoRemember(dmText){
     if(!fact) continue;
     try{
       await sbP('standing_orders',{world_id:curWorldId,rule_text:fact,category:'Memory'});
-      // Refresh cached orders so next turn includes this
       cachedOrders=null;
       toast(`📌 Remembered: ${fact.slice(0,40)}${fact.length>40?'…':''}`, 'ok');
     }catch(e){console.error('autoRemember error:',e);}
   }
 }
+
 async function genOptions(dmText, world, playerAction=''){
   const ao=$('action-options');ao.style.display='none';
   try{
     const gs=curGS;
-    // Extract last thing said/asked in the scene for better context
     const lastDialogue=dmText.match(/"([^"]{10,100})"\s*(?:he|she|they|it)?\s*(?:says?|asks?|said|asked)?[^"]*$/i)?.[1]||'';
     const raw=await callAI(
 `You generate 3 action options for a text RPG player. Return ONLY a raw JSON array of exactly 3 strings.
@@ -1572,7 +1537,6 @@ MEMORY TAGS: [REMEMBER: fact] — saves important facts to permanent memory. Onl
   return p.join('\n');
 }
 
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  STAT PARSING
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1586,7 +1550,6 @@ async function parseStats(text){
   if(loc)u.current_location=loc;if(time)u.current_time_of_day=time;if(stage)u.power_stage=stage;
   if(Object.keys(u).length){try{await sbPa('game_state',`world_id=eq.${curWorldId}`,u);Object.assign(curGS,u);updateSB();}catch(e){}}
 
-  // Death handling
   if(hp&&parseInt(hp)<=0&&curPS){
     const deathM=curPS.notes?.match(/DEATH:([^|$\n]+)/);
     const deathMode=deathM?deathM[1].trim():'easy';
@@ -1598,13 +1561,11 @@ async function parseStats(text){
   }
   const pn=m(/\[POWER_SYSTEM:\s*([^\]]+)\]/i),pl=m(/\[POWER_LEVEL:\s*([^\]]+)\]/i);
   if(pn||pl){const pu={};if(pn){pu.system_name=pn;if(curPS)curPS.system_name=pn;}if(pl){pu.current_level=pl;if(curPS)curPS.current_level=pl;}try{await sbPa('power_system',`world_id=eq.${curWorldId}`,pu);updateSB();}catch(e){}}
-  // VS Battles tags
   const tier=m(/\[TIER:\s*([^\]]+)\]/i),atk=m(/\[ATK:\s*([^\]]+)\]/i),spd=m(/\[SPD:\s*([^\]]+)\]/i),dur=m(/\[DUR:\s*([^\]]+)\]/i),int=m(/\[INT:\s*([^\]]+)\]/i),pows=m(/\[POWERS:\s*([^\]]+)\]/i);
   if(tier||atk||spd||dur||int||pows){
     if(tier)curVSB.tier=tier;if(atk)curVSB.attack_potency=atk;if(spd)curVSB.speed=spd;if(dur)curVSB.durability=dur;if(int)curVSB.intelligence=int;if(pows)curVSB.powers=pows;
     updateSB();
   }
-  // Arc transition detection
   const newArc=m(/\[NEW_ARC:\s*([^\]]+)\]/i);
   if(newArc) loadNewArc(newArc);
 }
@@ -1632,14 +1593,13 @@ async function deleteWorldAndLeave(){
   curWorldId=null;cachedWorld=null;cachedOrders=null;
   goHome();
 }
+
 async function handleEasyDeath(){
-  // Restart at beginning of current arc
   const arcM=curPS?.notes?.match(/ARC:([^|$\n]+)/);
   const arcName=arcM?arcM[1].trim():'current arc';
   $('game-log').innerHTML='';
   addSys(`💀 You have fallen… but this is not the end.`);
   addSys(`You wake up at the start of the ${arcName}. Battered. Alive. The story continues.`);
-  // Reset HP, clear conversation history, restart the arc
   await sbPa('game_state',`world_id=eq.${curWorldId}`,{hp:50});
   if(curGS)curGS.hp=50;
   await sbD('conversation_history',`world_id=eq.${curWorldId}`).catch(()=>{});
@@ -1671,11 +1631,10 @@ canon_details: Characters in this arc (name/gender/abilities), locations, key ev
     if(jm){try{details=JSON.parse(jm[0]).canon_details||'';}catch(_){}}
     if(!details&&txt.length>100) details=txt.replace(/```json|```|\{[\s\S]*\}/g,'').trim().slice(0,2000);
     if(details){
-      // Update canon_rules with new arc info
       const [currentWorld]=await sbG('worlds',`id=eq.${curWorldId}&select=canon_rules`);
       const newCanon=`CURRENT ARC: ${arcName}\n${details}`;
       await sbPa('worlds',`id=eq.${curWorldId}`,{canon_rules:newCanon});
-      cachedWorld=null; // force refresh next turn
+      cachedWorld=null;
       toast(`✓ ${arcName} loaded`,'ok');
       addSys(`📖 Arc transition: ${arcName}`);
     }
@@ -1685,10 +1644,7 @@ canon_details: Characters in this arc (name/gender/abilities), locations, key ev
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  UNIVERSAL SHOP
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-// Generate VS Battles wiki search URL for an item/ability
 function vsbLink(name, source){
-  // Try direct page first — VS Battles uses underscores and title case
   const pageName=encodeURIComponent(name.trim().replace(/\s+/g,'_'));
   return `https://vsbattles.fandom.com/wiki/${pageName}`;
 }
@@ -1697,6 +1653,7 @@ function vsbBtn(name, source){
   const url=vsbLink(name,source);
   return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--cyan);text-decoration:none;border:1px solid rgba(74,184,212,.3);border-radius:4px;padding:2px 7px;margin-top:4px;" title="View on VS Battles Wiki">⚔ VS Wiki</a>`;
 }
+
 async function openShop(){
   $('shop-ov').classList.add('open');
   const recsEl=$('shop-results');
@@ -1709,7 +1666,6 @@ async function openShop(){
     const balance=gs?.berry||0;
     const {api}=cfg();
 
-    // Search VS Battles Wiki for items relevant to this player's situation
     const searchRes=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':api,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
@@ -1774,7 +1730,6 @@ function closeShop(){$('shop-ov').classList.remove('open');}
 let shopItems=[];
 
 function parseShopText(raw, curName){
-  // Parse pipe-delimited lines: NAME|SOURCE|DESCRIPTION|PRICE|REQUIREMENT|CANON(yes/no)
   const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l.includes('|'));
   return lines.slice(0,4).map(line=>{
     const [name,canon_source,description,priceStr,power_requirement,canonStr]=line.split('|').map(s=>s.trim());
@@ -1794,7 +1749,6 @@ async function searchShop(){
     const curName=getCurrency();
     $('shop-currency').textContent=curName;
 
-    // Search VS Battles Wiki directly via Anthropic web search
     const {api}=cfg();
     const searchRes=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
@@ -1829,7 +1783,6 @@ CRITICAL: Only return items that actually exist on VS Battles Wiki. The URL must
       return;
     }
 
-    // Parse results
     const lines=rawText.split('\n').filter(l=>l.includes('|')&&!l.startsWith('NAME'));
     const items=lines.slice(0,3).map(line=>{
       const parts=line.split('|').map(p=>p.trim());
@@ -1930,7 +1883,6 @@ async function openMod(type){
   if(type==='vsb'){
     title.textContent='📊 VS Battles Profile';
     const gs=curGS,ps=curPS;
-    // Generate full VS Battles profile via AI
     try{
       const [world]=await sbG('worlds',`id=eq.${curWorldId}&select=world_name,canon_rules`);
       const raw=await callAI(`You are a VS Battles wiki editor. Generate an accurate VS Battles wiki-style profile for this character. Return ONLY raw JSON:
@@ -1939,7 +1891,6 @@ async function openMod(type){
 Use actual VS Battles tier notation. Be accurate to the character's current power level — NOT their peak canon level, but where they are NOW in their story based on the data provided.`,
         [{role:'user',content:`World: ${world?.world_name}\nCharacter: ${ps?.notes||'unknown'}\nCurrent power system: ${ps?.system_name} — ${ps?.current_level}\nSpecial abilities: ${ps?.special_abilities}\nHP: ${gs?.hp}\nVS data so far: ${JSON.stringify(curVSB)}`}],600);
       const profile=JSON.parse(raw.replace(/```json|```/g,'').trim());
-      // update curVSB
       curVSB={tier:profile.tier||'—',attack_potency:profile.attack_potency||'—',speed:profile.speed||'—',durability:profile.durability||'—',intelligence:profile.intelligence||'—',powers:Array.isArray(profile.powers_and_abilities)?profile.powers_and_abilities.join(', '):'—'};
       updateSB();
       body.innerHTML=`
@@ -1998,7 +1949,6 @@ if(_ak&&!_ak.startsWith('__'))localStorage.setItem('elysi_api',_ak);
 if(_su&&!_su.startsWith('__'))localStorage.setItem('elysi_url',_su);
 if(_sk&&!_sk.startsWith('__'))localStorage.setItem('elysi_key',_sk);
 
-// Restore saved session or show auth screen
 const _saved=localStorage.getItem('elysi_session');
 if(_saved){
   try{currentUser=JSON.parse(_saved);enterApp();}
