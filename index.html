@@ -403,7 +403,8 @@
     <div class="topbar">
       <button class="btn btn-ico btn-sm" id="mob-tog" onclick="toggleSidebar()" style="display:none;">☰</button>
       <span class="logo" id="g-title">Elysiad</span>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-sm" id="voice-toggle" onclick="toggleVoice()" title="Toggle voice narration" style="font-size:14px;">🔇</button>
         <button class="btn btn-sm" onclick="openMod('log')">📖 Log</button>
         <button class="btn btn-sm" onclick="openSettings()">⚙</button>
       </div>
@@ -986,6 +987,21 @@ async function streamDM(system, messages, maxTokens=2000){
 
   cursor.remove();
   lb.innerHTML=renderMarkdown(stripStatTags(full));
+
+  // Add speaker button to this narrator message
+  const speakBtn=document.createElement('button');
+  speakBtn.title='Read aloud';
+  speakBtn.style.cssText='background:none;border:none;cursor:pointer;font-size:13px;color:var(--text3);padding:4px 2px;margin-top:6px;display:block;transition:color .14s;';
+  speakBtn.textContent='🔊';
+  speakBtn.onmouseenter=()=>{speakBtn.style.color='var(--accent)';};
+  speakBtn.onmouseleave=()=>{speakBtn.style.color='var(--text3)';};
+  const plainText=stripStatTags(full).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  speakBtn.onclick=()=>speakText(plainText,speakBtn);
+  lb.appendChild(speakBtn);
+
+  // Auto-narrate if voice is on
+  if(voiceEnabled) speakText(plainText,speakBtn);
+
   return full;
 }
 
@@ -1350,7 +1366,6 @@ async function genOpening(world,gs,ps){
   }catch(e){ty.remove();addSys('Error: '+e.message);}
 }
 
-function leaveGame(){curWorldId=null;cachedWorld=null;cachedOrders=null;goHome();}
 
 function updateSB(){
   const g=curGS,p=curPS;if(!g)return;
@@ -1971,6 +1986,87 @@ function toggleSidebar(){
   if(isMob)$('sb-close').style.display=$('sidebar').classList.contains('mob')?'flex':'none';
 }
 window.addEventListener('resize',checkMob);
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  VOICE NARRATION
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let voiceEnabled=false;
+let voiceUtterance=null;
+let selectedVoice=null;
+
+// Load available voices — browsers load them asynchronously
+function loadVoices(){
+  const voices=speechSynthesis.getVoices();
+  if(!voices.length) return;
+  // Prefer a deep/dramatic English voice: prefer male, then any English, then first available
+  const pref=['Daniel','Google UK English Male','Alex','Tom','Arthur','Microsoft David','Eloquence'];
+  for(const name of pref){
+    const v=voices.find(v=>v.name.includes(name));
+    if(v){selectedVoice=v;return;}
+  }
+  // Fall back to English voices, favour slower/deeper
+  const eng=voices.filter(v=>v.lang.startsWith('en'));
+  selectedVoice=eng[0]||voices[0];
+}
+speechSynthesis.addEventListener('voiceschanged',loadVoices);
+loadVoices();
+
+function stopSpeech(){
+  if(speechSynthesis.speaking||speechSynthesis.pending) speechSynthesis.cancel();
+  // Reset any active speaker buttons
+  document.querySelectorAll('.speak-active').forEach(b=>{b.textContent='🔊';b.classList.remove('speak-active');});
+}
+
+function speakText(text, btn){
+  stopSpeech();
+  if(!text||!text.trim()) return;
+  loadVoices();
+
+  // Split long text into sentences to avoid browser 32KB limit
+  const sentences=text.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[text];
+  let idx=0;
+
+  if(btn){btn.textContent='⏹';btn.classList.add('speak-active');}
+
+  function speakNext(){
+    if(idx>=sentences.length){
+      if(btn){btn.textContent='🔊';btn.classList.remove('speak-active');}
+      return;
+    }
+    const utt=new SpeechSynthesisUtterance(sentences[idx++].trim());
+    utt.rate=0.92;   // slightly slower = more dramatic
+    utt.pitch=0.88;  // slightly lower pitch = narrator voice
+    utt.volume=1;
+    if(selectedVoice) utt.voice=selectedVoice;
+    utt.onend=speakNext;
+    utt.onerror=(e)=>{if(e.error!=='interrupted'){if(btn){btn.textContent='🔊';btn.classList.remove('speak-active');}}};
+    voiceUtterance=utt;
+    speechSynthesis.speak(utt);
+  }
+  speakNext();
+}
+
+function toggleVoice(){
+  voiceEnabled=!voiceEnabled;
+  const btn=$('voice-toggle');
+  if(voiceEnabled){
+    btn.textContent='🔊';
+    btn.style.borderColor='var(--accent)';
+    btn.style.color='var(--accent)';
+    btn.title='Voice ON — click to mute';
+    toast('🔊 Voice narration ON','ok');
+  } else {
+    stopSpeech();
+    btn.textContent='🔇';
+    btn.style.borderColor='';
+    btn.style.color='';
+    btn.title='Voice OFF — click to enable';
+    toast('🔇 Voice narration OFF','ok');
+  }
+}
+
+// Stop speech when navigating away from game
+function leaveGame(){curWorldId=null;cachedWorld=null;cachedOrders=null;stopSpeech();goHome();}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  INIT
