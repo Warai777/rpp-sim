@@ -412,11 +412,19 @@
     </div>
     <div class="game-log" id="game-log"></div>
     <div class="action-options" id="action-options" style="display:none;"></div>
-    <div id="music-bar" style="display:none;padding:5px 16px;background:var(--bg2);border-top:1px solid var(--border);align-items:center;gap:10px;">
-      <span style="font-size:11px;color:var(--text3);">🎵</span>
-      <span id="music-title" style="font-size:11px;color:var(--text2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</span>
-      <button onclick="skipTrack()" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text3);padding:2px 6px;" title="Skip track">⏭</button>
-      <button onclick="toggleMusic()" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text3);padding:2px 6px;" title="Stop music">⏹</button>
+    <div id="music-bar" style="display:none;padding:6px 14px;background:var(--bg2);border-top:1px solid var(--border);align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-size:13px;">🎵</span>
+      <span id="music-title" style="font-size:11px;color:var(--text2);flex:1;min-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</span>
+      <div id="music-url-area" style="display:none;flex:2;min-width:200px;display:none;align-items:center;gap:6px;">
+        <input id="music-url-input" type="text" placeholder="Paste YouTube URL or search…"
+          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:4px 10px;color:var(--text);font-family:var(--font);font-size:12px;"
+          onkeydown="if(event.key==='Enter')playCustomMusic()">
+        <button onclick="playCustomMusic()" style="background:var(--accent);border:none;border-radius:var(--r);color:#fff;font-size:11px;padding:4px 10px;cursor:pointer;white-space:nowrap;">Play</button>
+        <button onclick="hideUrlInput()" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--text3);">✕</button>
+      </div>
+      <button onclick="showUrlInput()" style="background:none;border:1px solid var(--border);border-radius:var(--r);cursor:pointer;font-size:11px;color:var(--text3);padding:3px 8px;white-space:nowrap;" title="Play custom YouTube URL">+ Custom</button>
+      <button onclick="skipTrack()" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--text3);padding:2px 4px;" title="Skip / try another track">⏭</button>
+      <button onclick="toggleMusic()" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--text3);padding:2px 4px;" title="Stop music">⏹</button>
     </div>
     <div class="input-area">
       <button id="dice-toggle" onclick="toggleDice()" title="Toggle dice roll" style="background:none;border:1px solid var(--border);border-radius:var(--r);padding:6px 10px;font-size:16px;cursor:pointer;color:var(--text3);flex-shrink:0;" class="btn btn-sm">🎲</button>
@@ -2106,33 +2114,174 @@ function getMusicFrame(){
   return musicIframe;
 }
 
-async function searchAndPlayMusic(worldName){
+// Hardcoded OST queries for known worlds — no API call needed
+const WORLD_OST={
+  naruto:"Naruto Shippuden OST full soundtrack",
+  onepiece:"One Piece OST full soundtrack",
+  bleach:"Bleach OST full soundtrack",
+  mha:"My Hero Academia OST full soundtrack",
+  aot:"Attack on Titan OST full soundtrack",
+  demonslayer:"Demon Slayer Kimetsu no Yaiba OST full",
+  jjk:"Jujutsu Kaisen OST full soundtrack",
+  hxh:"Hunter x Hunter 2011 OST full soundtrack",
+  fma:"Fullmetal Alchemist Brotherhood OST full",
+  sololeveling2:"Solo Leveling OST full soundtrack",
+  omniscient:"Omniscient Reader Viewpoint OST",
+  tensura:"Tensura That Time Reincarnated Slime OST",
+  rezero:"Re Zero OST full soundtrack",
+  overlord:"Overlord anime OST full soundtrack",
+  sao:"Sword Art Online OST full soundtrack",
+  mushokutensei:"Mushoku Tensei OST full soundtrack",
+  lotm:"Lord of the Mysteries ambient dark OST",
+  eldenring:"Elden Ring OST full soundtrack",
+  darksouls:"Dark Souls OST full soundtrack",
+  hollow:"Hollow Knight OST full soundtrack",
+  hades:"Hades game OST full soundtrack",
+  cyberpunk:"Cyberpunk 2077 OST full soundtrack",
+  bg3:"Baldurs Gate 3 OST full soundtrack",
+  ffxiv:"Final Fantasy XIV OST full soundtrack",
+  witcher3:"Witcher 3 Wild Hunt OST full soundtrack",
+  gameofthrones:"Game of Thrones OST full soundtrack",
+  arcane:"Arcane Netflix OST full soundtrack",
+  strangerthings:"Stranger Things OST full soundtrack",
+  starwars:"Star Wars OST John Williams full",
+  dune:"Dune 2021 OST Hans Zimmer full",
+  stormlight:"epic fantasy orchestral ambient music",
+  stormlight2:"epic fantasy orchestral ambient music",
+  mistborn:"dark fantasy orchestral ambient music",
+  mistborn2:"dark fantasy orchestral ambient music",
+  mistborn3:"dark fantasy orchestral ambient music",
+  lotr:"Lord of the Rings OST full Howard Shore",
+  lotr2:"Lord of the Rings OST full Howard Shore",
+  witcher:"Witcher 3 OST full soundtrack",
+  witcher4:"Witcher 3 OST full soundtrack",
+  thebeginning:"epic fantasy battle ambient OST",
+  towerofgod:"Tower of God anime OST full",
+  duchesslife:"epic dark fantasy dungeon OST ambient",
+  btth:"chinese cultivation epic OST ambient xianxia",
+  coilingdragon:"epic xianxia cultivation music ambient",
+  issth:"epic xianxia cultivation music ambient",
+  mcu:"Marvel Cinematic Universe OST full",
+  dc:"Batman Superman DC Comics OST full",
+  matrix:"The Matrix OST full soundtrack",
+  johnwick:"John Wick OST full soundtrack",
+  avatar:"Avatar 2009 OST James Horner full",
+  breakingbad:"Breaking Bad OST full soundtrack",
+  theboys:"The Boys Amazon OST full soundtrack",
+  invincible:"Invincible Amazon OST full soundtrack",
+  kingkiller:"epic fantasy tavern ambient music",
+  wot:"epic orchestral fantasy ambient music",
+  cosmere:"epic orchestral fantasy ambient music",
+}
+
+function getOSTQuery(worldName){
+  // Look up by world id first (most reliable)
+  const worldId=getAllWorlds().find(w=>w.name===worldName)?.id||'';
+  if(worldId&&WORLD_OST[worldId])return WORLD_OST[worldId];
+  // Partial name match against keys
+  const lower=worldName.toLowerCase();
+  for(const [k,v] of Object.entries(WORLD_OST)){
+    if(lower.includes(k)||k.includes(lower))return v;
+  }
+  // Generic fallback — no API call needed
+  return worldName+' OST full soundtrack';
+}
+
+function searchAndPlayMusic(worldName){
   if(!musicEnabled)return;
-  const {api}=cfg();
-  if(!api)return;
-  try{
-    const raw=await callAI(
-      `Give me a single YouTube search query to find the best atmospheric OST/soundtrack for "${worldName}" anime/game/show. Return ONLY the search query, nothing else. Keep it under 10 words.`,
-      [{role:'user',content:`World: ${worldName}`}],60
-    );
-    const query=raw.trim().replace(/^"|"$/g,'').replace(/\n/g,' ');
-    if(!query)return;
-    const encoded=encodeURIComponent(query);
-    const frame=getMusicFrame();
+  // Check if user saved a custom URL for this world
+  const saved=localStorage.getItem('elysi_music_'+worldName);
+  if(saved){playCustomMusic_forWorld(worldName,saved);return;}
+  const query=getOSTQuery(worldName);
+  const encoded=encodeURIComponent(query);
+  const frame=getMusicFrame();
+  frame.src=`https://www.youtube.com/embed?listType=search&list=${encoded}&autoplay=1&loop=1&controls=0&fs=0&modestbranding=1&rel=0`;
+  const bar=$('music-bar');
+  const title=$('music-title');
+  if(bar)bar.style.display='flex';
+  if(title)title.textContent=worldName+' OST';
+  toast('🎵 Playing '+worldName+' OST','ok');
+}
+
+function playCustomMusic_forWorld(worldName, input){
+  const frame=getMusicFrame();
+  const bar=$('music-bar');
+  const title=$('music-title');
+  const videoId=extractYouTubeId(input);
+  if(videoId){
+    frame.src=`https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}&controls=0&fs=0&modestbranding=1&rel=0`;
+  } else {
+    const encoded=encodeURIComponent(input);
     frame.src=`https://www.youtube.com/embed?listType=search&list=${encoded}&autoplay=1&loop=1&controls=0&fs=0&modestbranding=1&rel=0`;
-    // Show music bar
-    const bar=$('music-bar');
-    const title=$('music-title');
-    if(bar){bar.style.display='flex';}
-    if(title){title.textContent=worldName+' OST';}
-    toast('🎵 Playing '+worldName+' OST','ok');
-  }catch(e){console.error('Music search failed:',e);}
+  }
+  if(bar)bar.style.display='flex';
+  if(title)title.textContent='♪ '+input.slice(0,35)+(input.length>35?'…':'');
 }
 
 function skipTrack(){
-  // Reload the iframe with a new random offset query to get a different video
   if(!musicEnabled||!cachedWorld?.world_name)return;
-  searchAndPlayMusic(cachedWorld.world_name+' OST playlist '+Math.floor(Math.random()*5+2));
+  const variants=[' full soundtrack',' best tracks',' ambient music',' battle theme',' emotional themes'];
+  const pick=variants[Math.floor(Math.random()*variants.length)];
+  const base=getOSTQuery(cachedWorld.world_name).replace(/ full soundtrack| OST full.*/,'');
+  const encoded=encodeURIComponent(base+pick);
+  const frame=getMusicFrame();
+  frame.src=`https://www.youtube.com/embed?listType=search&list=${encoded}&autoplay=1&loop=1&controls=0&fs=0&modestbranding=1&rel=0`;
+  toast('🎵 Skipped to next track','ok');
+}
+
+function showUrlInput(){
+  const area=$('music-url-area');
+  if(area){area.style.display='flex';$('music-url-input').focus();}
+}
+function hideUrlInput(){
+  const area=$('music-url-area');
+  if(area){area.style.display='none';$('music-url-input').value='';}
+}
+
+function extractYouTubeId(input){
+  const s=input.trim();
+  // Full URL patterns
+  const patterns=[
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /^([a-zA-Z0-9_-]{11})$/,  // bare video ID
+  ];
+  for(const p of patterns){const m=s.match(p);if(m)return m[1];}
+  return null;
+}
+
+function playCustomMusic(){
+  const input=$('music-url-input').value.trim();
+  if(!input){toast('Paste a YouTube URL or search term','err');return;}
+
+  // Enable music if it wasn't on
+  if(!musicEnabled){
+    musicEnabled=true;
+    const btn=$('music-toggle');
+    if(btn){btn.textContent='🎵';btn.style.borderColor='var(--accent)';btn.style.color='var(--accent)';}
+  }
+
+  const frame=getMusicFrame();
+  const bar=$('music-bar');
+  const title=$('music-title');
+
+  const videoId=extractYouTubeId(input);
+  if(videoId){
+    // Direct video embed
+    frame.src=`https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}&controls=0&fs=0&modestbranding=1&rel=0`;
+    if(bar)bar.style.display='flex';
+    if(title)title.textContent='Custom track';
+    toast('🎵 Playing custom track','ok');
+  } else {
+    // Treat as search query
+    const encoded=encodeURIComponent(input);
+    frame.src=`https://www.youtube.com/embed?listType=search&list=${encoded}&autoplay=1&loop=1&controls=0&fs=0&modestbranding=1&rel=0`;
+    if(bar)bar.style.display='flex';
+    if(title)title.textContent=input.slice(0,40)+(input.length>40?'…':'');
+    toast('🎵 Searching: '+input.slice(0,30),'ok');
+  }
+  // Save as custom override for this world so it persists on skip
+  if(cachedWorld?.world_name) localStorage.setItem('elysi_music_'+cachedWorld.world_name, input);
+  hideUrlInput();
 }
 
 function stopMusic(){
