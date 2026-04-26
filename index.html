@@ -1144,15 +1144,23 @@ async function generateWorldPresets(world){
     if(!api) throw new Error('No API key');
 
     const raw=await callAI(
-      `Generate 6 character backstory presets for the world of ${world.name} (${world.genre}).
-Return ONLY a raw JSON array, no markdown, no explanation:
-[{"label":"Short Label","icon":"emoji","back":"2-3 sentence backstory specific to this world","pers":"personality trait description"}]
-Ground each preset in actual ${world.name} lore. Reference real factions, locations, and roles. Make them varied — different power levels, backgrounds, and entry points.`,
-      [{role:'user',content:`World: ${world.name}\nGenre: ${world.genre}\nLore: ${world.lore?.slice(0,400)||''}`}],
-      700
+      `Generate 6 backstory presets for ${world.name} (${world.genre}). Return ONLY a JSON array, nothing else:
+[{"label":"Label","icon":"emoji","back":"One sentence backstory.","pers":"Personality."}]
+Use actual ${world.name} factions and roles. Keep each "back" field under 20 words.`,
+      [{role:'user',content:`World: ${world.name}\nGenre: ${world.genre}\nLore: ${world.lore?.slice(0,200)||''}`}],
+      1200
     );
 
-    let presets=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    const cleaned=raw.replace(/```json|```/g,'').trim();
+    let presets;
+    try{
+      presets=JSON.parse(cleaned);
+    }catch(parseErr){
+      // Try to salvage a partial array by truncating at last complete object
+      const lastBrace=cleaned.lastIndexOf('}');
+      const salvaged=cleaned.slice(0,lastBrace+1)+']';
+      try{presets=JSON.parse(salvaged);}catch(_){throw new Error('JSON parse failed: '+parseErr.message);}
+    }
     if(!Array.isArray(presets)||!presets.length) throw new Error('Empty presets array');
 
     renderPresets([
