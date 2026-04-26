@@ -1307,12 +1307,13 @@ async function enterWorld(wid,opening=false){
   try{
     const [[world],[gs],[ps]]=await Promise.all([sbG('worlds',`id=eq.${wid}&select=*`),sbG('game_state',`world_id=eq.${wid}&select=*`),sbG('power_system',`world_id=eq.${wid}&select=*`)]);
     curGS=gs;curPS=ps;
+    cachedWorld=world;
     $('sb-world').textContent=world.world_name;$('g-title').textContent=world.world_name;
     const nm=ps?.notes?.match(/N:([^|]+)/);const ap=ps?.notes?.match(/A:([^|]+)/);const cn=nm?nm[1].trim():'Adventurer';
     $('sb-name').textContent=cn;$('sb-arch').textContent=ap?ap[1].trim():'—';
     updateSB();checkMob();
     const curM2=ps?.notes?.match(/CUR:([^|$\n]+)/);
-    let shopCur=getCurrency();
+    const shopCur=curM2?curM2[1].trim():getCurrency();
     $('shop-currency').textContent=shopCur;
     $('sb-cur-label').textContent=shopCur;
 
@@ -1353,6 +1354,11 @@ function leaveGame(){curWorldId=null;cachedWorld=null;cachedOrders=null;goHome()
 
 function updateSB(){
   const g=curGS,p=curPS;if(!g)return;
+  // Always derive currency name from stored notes — never stale from a previous world
+  const _cm=p?.notes?.match(/CUR:([^|$\n]+)/);
+  const _cur=_cm?_cm[1].trim():getCurrency();
+  $('sb-cur-label').textContent=_cur;
+  $('shop-currency').textContent=_cur;
   $('s-hp').textContent=g.hp??'—';
   $('s-berry').textContent=g.berry!=null?Number(g.berry).toLocaleString():'—';
   $('s-loc').textContent=g.current_location||'—';$('s-day').textContent=g.current_day||1;
