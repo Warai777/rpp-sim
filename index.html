@@ -1110,72 +1110,91 @@ function goToChar(){
   if(!selWorld)return;
   $('char-title').textContent=(selWorld.icon||'🌐')+' '+selWorld.name;
   $('cname').value='';$('capp').value='';$('cback').value='';$('cpers').value='';
+  // Reset death mode to easy
+  const easyRadio=$('mode-easy');if(easyRadio){easyRadio.checked=true;selectMode(easyRadio);}
   nav('create-char');
   generateWorldPresets(selWorld);
 }
 
 let worldPresetData={};
 
-// FIX 2: generateWorldPresets — clean btn population, use __ separator in keys, pass `this`
 async function generateWorldPresets(world){
   const btns=$('preset-btns');
   const loading=$('preset-loading');
+
+  // Ensure world has a stable id — search results may not have one
+  if(!world.id) world.id='custom_'+world.name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+
+  const wid=world.id;
+
   // Show isekai placeholder while loading
-  btns.innerHTML=`<button class="btn btn-sm preset-pick" onclick="pickDynPreset('isekai__${world.id}',this)">🌀 Isekai'd</button>`;
+  btns.innerHTML=`<button class="btn btn-sm preset-pick" onclick="pickDynPreset('isekai__${wid}',this)">🌀 Isekai'd</button>`;
   loading.style.display='flex';
+
+  const renderPresets=(list)=>{
+    worldPresetData[wid]=list;
+    btns.innerHTML=list.map((p,i)=>
+      `<button class="btn btn-sm preset-pick" onclick="pickDynPreset('${wid}__${i}',this)">${p.icon||'⚔'} ${p.label}</button>`
+    ).join('');
+    loading.style.display='none';
+  };
+
   try{
-    const raw=await callAI(`Generate 6 character backstory presets that fit the world of ${world.name} (${world.genre}).
-Return ONLY raw JSON array — no markdown:
-[{"label":"Short Label","icon":"emoji","back":"2-3 sentence backstory specific to this world","pers":"personality traits"}]
-Each preset must be grounded in ${world.name} lore — reference actual factions, locations, roles from this world. Examples for One Piece: Marine deserter, failed pirate, East Blue fisherman, bounty hunter. For Naruto: Academy dropout, missing-nin, civilian with a secret, clan heir. Make them varied and interesting starting points.`,
-    [{role:'user',content:`World: ${world.name}\nGenre: ${world.genre}\nLore: ${world.lore?.slice(0,300)||''}`}],600);
-    const presets=JSON.parse(raw.replace(/```json|```/g,'').trim());
-    // Store with isekai at index 0
-    worldPresetData[world.id]=[
+    const {api}=cfg();
+    if(!api) throw new Error('No API key');
+
+    const raw=await callAI(
+      `Generate 6 character backstory presets for the world of ${world.name} (${world.genre}).
+Return ONLY a raw JSON array, no markdown, no explanation:
+[{"label":"Short Label","icon":"emoji","back":"2-3 sentence backstory specific to this world","pers":"personality trait description"}]
+Ground each preset in actual ${world.name} lore. Reference real factions, locations, and roles. Make them varied — different power levels, backgrounds, and entry points.`,
+      [{role:'user',content:`World: ${world.name}\nGenre: ${world.genre}\nLore: ${world.lore?.slice(0,400)||''}`}],
+      700
+    );
+
+    let presets=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    if(!Array.isArray(presets)||!presets.length) throw new Error('Empty presets array');
+
+    renderPresets([
       {label:"Isekai'd",icon:'🌀',
        back:`A person from modern Earth who died and woke up in the world of ${world.name} with no explanation, no powers, and only their real-world knowledge to rely on.`,
        pers:'Analytical, adaptable, secretly terrified but hiding it well'},
       ...presets
-    ];
-    // Render all buttons — __ separator avoids splitting on worldId underscores; pass `this`
-    btns.innerHTML=worldPresetData[world.id].map((p,i)=>
-      `<button class="btn btn-sm preset-pick" onclick="pickDynPreset('${world.id}__${i}',this)">${p.icon} ${p.label}</button>`
-    ).join('');
+    ]);
   }catch(e){
-    // Fallback generic presets
-    worldPresetData[world.id]=[
+    console.error('generateWorldPresets failed:',e.message);
+    // Self-contained fallback — no dependency on PRESETS object
+    renderPresets([
       {label:"Isekai'd",icon:'🌀',back:`A person from modern Earth who died and woke up in ${world.name} with no explanation, no powers, and only their real-world knowledge to rely on.`,pers:'Analytical, adaptable, secretly terrified but hiding it well'},
-      {label:'Bandit',icon:'🗡',back:PRESETS.bandit.back,pers:PRESETS.bandit.pers},
-      {label:'Street Orphan',icon:'🔥',back:PRESETS.orphan.back,pers:PRESETS.orphan.pers},
-      {label:'Soldier',icon:'⚔️',back:PRESETS.soldier.back,pers:PRESETS.soldier.pers},
-      {label:'Noble',icon:'👑',back:PRESETS.noble.back,pers:PRESETS.noble.pers},
-    ];
-    btns.innerHTML=worldPresetData[world.id].map((p,i)=>
-      `<button class="btn btn-sm preset-pick" onclick="pickDynPreset('${world.id}__${i}',this)">${p.icon} ${p.label}</button>`
-    ).join('');
+      {label:'Street Orphan',icon:'🔥',back:'Grew up with no family, surviving on the streets through cunning and desperation. Learned to read people fast and trust them slow.',pers:'Streetwise, fiercely independent, protective of the weak'},
+      {label:'Fallen Noble',icon:'👑',back:'Born into privilege but lost everything — title contested, fortune seized, family name destroyed. Starting over with nothing but education and old contacts.',pers:'Proud, strategic, uncomfortable with their new circumstances'},
+      {label:'Veteran Soldier',icon:'⚔️',back:'A survivor of wars they no longer believe in. Discharged after one order too many. Carries hard-earned skill, deep scars, and the exhaustion of someone who has seen too much.',pers:'Disciplined, cynical, deeply loyal once trust is earned'},
+      {label:'Wandering Scholar',icon:'📚',back:'Once a respected academic, now fallen from grace after a discovery that made powerful people uncomfortable. The knowledge remains. The position does not.',pers:'Precise, curious, quietly furious about the injustice of it'},
+      {label:'Escaped Prisoner',icon:'⛓',back:'Spent years locked away, recently escaped with nothing but a direction: away. Has never made a real choice about their own life until now.',pers:'Calculating, watchful, learning what freedom actually means'},
+    ]);
   }
-  loading.style.display='none';
 }
 
 // FIX 3: pickDynPreset — accepts `el` param, uses __ separator for safe splitting
 function pickDynPreset(key, el){
-  // Handle legacy isekai__ key from the initial placeholder button
+  // Handle isekai__ key from the initial placeholder button
   if(key.startsWith('isekai__')){
     const worldId=key.replace('isekai__','');
     const world=getAllWorlds().find(w=>w.id===worldId)||selWorld;
-    $('cback').value=`A person from modern Earth who died and woke up in ${world?.name||'this world'} with no explanation, no powers, and only their real-world knowledge to rely on.`;
+    $('cback').value=`A person from modern Earth who died and woke up in ${world?.name||selWorld?.name||'this world'} with no explanation, no powers, and only their real-world knowledge to rely on.`;
     if(!$('cpers').value)$('cpers').value='Analytical, adaptable, secretly terrified but hiding it well';
     document.querySelectorAll('.preset-pick').forEach(b=>b.classList.remove('active'));
     if(el)el.classList.add('active');
     return;
   }
-  // key format: worldId__index  (double underscore — worldIds never contain __)
+  // key format: worldId__index  (double underscore — never appears in worldIds)
   const sep=key.lastIndexOf('__');
-  if(sep===-1)return;
+  if(sep===-1){console.error('pickDynPreset: bad key',key);return;}
   const worldId=key.slice(0,sep);
   const index=parseInt(key.slice(sep+2));
   const presets=worldPresetData[worldId];
-  if(!presets||isNaN(index)||!presets[index])return;
+  if(!presets){console.error('pickDynPreset: no presets for',worldId);return;}
+  if(isNaN(index)||!presets[index]){console.error('pickDynPreset: bad index',index);return;}
   const p=presets[index];
   $('cback').value=p.back;
   if(!$('cpers').value)$('cpers').value=p.pers;
