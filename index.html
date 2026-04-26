@@ -404,13 +404,20 @@
       <button class="btn btn-ico btn-sm" id="mob-tog" onclick="toggleSidebar()" style="display:none;">☰</button>
       <span class="logo" id="g-title">Elysiad</span>
       <div style="display:flex;gap:8px;align-items:center;">
-        <button class="btn btn-sm" id="voice-toggle" onclick="toggleVoice()" title="Toggle voice narration" style="font-size:14px;">🔇</button>
+        <button class="btn btn-sm" id="voice-toggle" onclick="toggleVoice()" title="Voice narration OFF — click to enable" style="font-size:14px;color:var(--text3);">🔇</button>
+        <button class="btn btn-sm" id="music-toggle" onclick="toggleMusic()" title="Background music OFF — click to enable" style="font-size:14px;color:var(--text3);">🎵</button>
         <button class="btn btn-sm" onclick="openMod('log')">📖 Log</button>
         <button class="btn btn-sm" onclick="openSettings()">⚙</button>
       </div>
     </div>
     <div class="game-log" id="game-log"></div>
     <div class="action-options" id="action-options" style="display:none;"></div>
+    <div id="music-bar" style="display:none;padding:5px 16px;background:var(--bg2);border-top:1px solid var(--border);align-items:center;gap:10px;">
+      <span style="font-size:11px;color:var(--text3);">🎵</span>
+      <span id="music-title" style="font-size:11px;color:var(--text2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</span>
+      <button onclick="skipTrack()" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text3);padding:2px 6px;" title="Skip track">⏭</button>
+      <button onclick="toggleMusic()" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text3);padding:2px 6px;" title="Stop music">⏹</button>
+    </div>
     <div class="input-area">
       <button id="dice-toggle" onclick="toggleDice()" title="Toggle dice roll" style="background:none;border:1px solid var(--border);border-radius:var(--r);padding:6px 10px;font-size:16px;cursor:pointer;color:var(--text3);flex-shrink:0;" class="btn btn-sm">🎲</button>
       <textarea id="act-inp" placeholder="Free response — type anything…" rows="1"
@@ -475,7 +482,9 @@
 //  CURRENCY — single source of truth
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function getCurrency(){
+  // Always prefer the stored CUR: value — this is the single source of truth
   if(curPS?.notes){const m=curPS.notes.match(/CUR:([^|$\n]+)/);if(m&&m[1].trim())return m[1].trim();}
+  // Fallback: derive from world name (only used before ps is loaded)
   const wn=(cachedWorld?.world_name||'').toLowerCase();
   if(wn.includes('one piece')||wn.includes('pirate'))return 'Berries';
   if(wn.includes('naruto')||wn.includes('shinobi'))return 'Ryo';
@@ -493,6 +502,7 @@ function getCurrency(){
   if(wn.includes('solo leveling'))return 'Won';
   if(wn.includes('dune'))return 'Solaris';
   if(wn.includes('star wars'))return 'Credits';
+  if(wn.includes('slime')||wn.includes('tensura'))return 'Gold Coins';
   return 'Gold';
 }
 
@@ -999,8 +1009,8 @@ async function streamDM(system, messages, maxTokens=2000){
   speakBtn.onclick=()=>speakText(plainText,speakBtn);
   lb.appendChild(speakBtn);
 
-  // Auto-narrate if voice is on
-  if(voiceEnabled) speakText(plainText,speakBtn);
+  // Auto-narrate if voice is on (slight delay so streaming animation finishes)
+  if(voiceEnabled) setTimeout(()=>speakText(plainText,speakBtn),300);
 
   return full;
 }
@@ -1339,6 +1349,8 @@ async function enterWorld(wid,opening=false){
       generatePortrait(pap[1].trim(), world.world_name, []);
     }
     if(opening){addSys('The world takes shape…');await genOpening(world,gs,ps);}
+    // Start background music if enabled
+    if(musicEnabled) searchAndPlayMusic(world.world_name);
     else{
       const hist=await sbG('conversation_history',`world_id=eq.${wid}&select=role,content&order=created_at.asc&limit=60`);
       if(hist?.length){
@@ -1991,59 +2003,71 @@ window.addEventListener('resize',checkMob);
 //  VOICE NARRATION
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let voiceEnabled=false;
-let voiceUtterance=null;
-let selectedVoice=null;
+let isSpeaking=false;
+let activeSpeakBtn=null;
 
-// Load available voices — browsers load them asynchronously
 function loadVoices(){
   const voices=speechSynthesis.getVoices();
-  if(!voices.length) return;
-  // Prefer a deep/dramatic English voice: prefer male, then any English, then first available
-  const pref=['Daniel','Google UK English Male','Alex','Tom','Arthur','Microsoft David','Eloquence'];
+  if(!voices.length)return null;
+  // Priority list — deep/clear English narrator voices
+  const pref=['Google UK English Male','Daniel','Arthur','Microsoft David Desktop - English (United States)','Alex','Tom','Microsoft Mark','Samantha'];
   for(const name of pref){
     const v=voices.find(v=>v.name.includes(name));
-    if(v){selectedVoice=v;return;}
+    if(v)return v;
   }
-  // Fall back to English voices, favour slower/deeper
-  const eng=voices.filter(v=>v.lang.startsWith('en'));
-  selectedVoice=eng[0]||voices[0];
+  const eng=voices.filter(v=>v.lang.startsWith('en-'));
+  return eng[0]||voices[0]||null;
 }
-speechSynthesis.addEventListener('voiceschanged',loadVoices);
-loadVoices();
+speechSynthesis.addEventListener('voiceschanged',()=>{});
 
 function stopSpeech(){
-  if(speechSynthesis.speaking||speechSynthesis.pending) speechSynthesis.cancel();
-  // Reset any active speaker buttons
-  document.querySelectorAll('.speak-active').forEach(b=>{b.textContent='🔊';b.classList.remove('speak-active');});
+  isSpeaking=false;
+  speechSynthesis.cancel();
+  if(activeSpeakBtn){
+    activeSpeakBtn.textContent='🔊';
+    activeSpeakBtn.style.color='var(--text3)';
+    activeSpeakBtn=null;
+  }
 }
 
-function speakText(text, btn){
+function speakText(plainText, btn){
+  // If already speaking THIS button — stop (toggle off)
+  if(isSpeaking&&activeSpeakBtn===btn){
+    stopSpeech();
+    return;
+  }
+  // Stop any previous speech
   stopSpeech();
-  if(!text||!text.trim()) return;
-  loadVoices();
+  if(!plainText||!plainText.trim())return;
 
-  // Split long text into sentences to avoid browser 32KB limit
-  const sentences=text.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[text];
+  const voice=loadVoices();
+  // Chunk into sentences — avoids 32KB Chrome limit & gives natural pauses
+  const chunks=plainText.match(/[^.!?\n]+[.!?\n]+|[^.!?\n]{1,200}/g)||[plainText];
   let idx=0;
+  isSpeaking=true;
+  activeSpeakBtn=btn;
+  if(btn){btn.textContent='⏹';btn.style.color='var(--accent)';}
 
-  if(btn){btn.textContent='⏹';btn.classList.add('speak-active');}
-
-  function speakNext(){
-    if(idx>=sentences.length){
-      if(btn){btn.textContent='🔊';btn.classList.remove('speak-active');}
+  function next(){
+    if(!isSpeaking||idx>=chunks.length){
+      isSpeaking=false;
+      if(btn&&activeSpeakBtn===btn){btn.textContent='🔊';btn.style.color='var(--text3)';activeSpeakBtn=null;}
       return;
     }
-    const utt=new SpeechSynthesisUtterance(sentences[idx++].trim());
-    utt.rate=0.92;   // slightly slower = more dramatic
-    utt.pitch=0.88;  // slightly lower pitch = narrator voice
-    utt.volume=1;
-    if(selectedVoice) utt.voice=selectedVoice;
-    utt.onend=speakNext;
-    utt.onerror=(e)=>{if(e.error!=='interrupted'){if(btn){btn.textContent='🔊';btn.classList.remove('speak-active');}}};
-    voiceUtterance=utt;
+    const utt=new SpeechSynthesisUtterance(chunks[idx++].trim());
+    utt.rate=0.88;    // noticeably slower — narrator pace
+    utt.pitch=0.82;   // distinctly lower — epic narrator register
+    utt.volume=1.0;
+    if(voice)utt.voice=voice;
+    utt.onend=next;
+    utt.onerror=(e)=>{
+      if(e.error==='interrupted')return; // expected on cancel
+      isSpeaking=false;
+      if(btn&&activeSpeakBtn===btn){btn.textContent='🔊';btn.style.color='var(--text3)';activeSpeakBtn=null;}
+    };
     speechSynthesis.speak(utt);
   }
-  speakNext();
+  next();
 }
 
 function toggleVoice(){
@@ -2055,7 +2079,7 @@ function toggleVoice(){
     btn.style.color='var(--accent)';
     btn.title='Voice ON — click to mute';
     toast('🔊 Voice narration ON','ok');
-  } else {
+  }else{
     stopSpeech();
     btn.textContent='🔇';
     btn.style.borderColor='';
@@ -2065,8 +2089,80 @@ function toggleVoice(){
   }
 }
 
-// Stop speech when navigating away from game
-function leaveGame(){curWorldId=null;cachedWorld=null;cachedOrders=null;stopSpeech();goHome();}
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  BACKGROUND MUSIC (YouTube embed, hidden iframe)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let musicEnabled=false;
+let musicIframe=null;
+let musicSearchTimer=null;
+
+function getMusicFrame(){
+  if(!musicIframe){
+    musicIframe=document.createElement('iframe');
+    musicIframe.style.cssText='position:fixed;bottom:-9999px;left:-9999px;width:1px;height:1px;border:none;';
+    musicIframe.allow='autoplay';
+    document.body.appendChild(musicIframe);
+  }
+  return musicIframe;
+}
+
+async function searchAndPlayMusic(worldName){
+  if(!musicEnabled)return;
+  const {api}=cfg();
+  if(!api)return;
+  try{
+    const raw=await callAI(
+      `Give me a single YouTube search query to find the best atmospheric OST/soundtrack for "${worldName}" anime/game/show. Return ONLY the search query, nothing else. Keep it under 10 words.`,
+      [{role:'user',content:`World: ${worldName}`}],60
+    );
+    const query=raw.trim().replace(/^"|"$/g,'').replace(/\n/g,' ');
+    if(!query)return;
+    const encoded=encodeURIComponent(query);
+    const frame=getMusicFrame();
+    frame.src=`https://www.youtube.com/embed?listType=search&list=${encoded}&autoplay=1&loop=1&controls=0&fs=0&modestbranding=1&rel=0`;
+    // Show music bar
+    const bar=$('music-bar');
+    const title=$('music-title');
+    if(bar){bar.style.display='flex';}
+    if(title){title.textContent=worldName+' OST';}
+    toast('🎵 Playing '+worldName+' OST','ok');
+  }catch(e){console.error('Music search failed:',e);}
+}
+
+function skipTrack(){
+  // Reload the iframe with a new random offset query to get a different video
+  if(!musicEnabled||!cachedWorld?.world_name)return;
+  searchAndPlayMusic(cachedWorld.world_name+' OST playlist '+Math.floor(Math.random()*5+2));
+}
+
+function stopMusic(){
+  if(musicIframe){musicIframe.src='about:blank';}
+  const bar=$('music-bar');if(bar)bar.style.display='none';
+}
+
+function toggleMusic(){
+  musicEnabled=!musicEnabled;
+  const btn=$('music-toggle');
+  if(musicEnabled){
+    btn.textContent='🎵';
+    btn.style.borderColor='var(--accent)';
+    btn.style.color='var(--accent)';
+    btn.title='Music ON — click to stop';
+    // Play for current world if in game
+    if(cachedWorld?.world_name) searchAndPlayMusic(cachedWorld.world_name);
+    else toast('🎵 Music will play when you enter a world','ok');
+  }else{
+    stopMusic();
+    btn.textContent='🎵';
+    btn.style.borderColor='';
+    btn.style.color='var(--text3)';
+    btn.title='Music OFF — click to enable';
+    toast('🎵 Music stopped','ok');
+  }
+}
+
+// Stop speech + music when leaving game
+function leaveGame(){curWorldId=null;cachedWorld=null;cachedOrders=null;stopSpeech();stopMusic();goHome();}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  INIT
