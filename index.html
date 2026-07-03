@@ -488,7 +488,9 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="yt-player"></div>
 
+<script src="https://www.youtube.com/iframe_api"></script>
 <script>
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  CURRENCY — single source of truth
@@ -2120,20 +2122,45 @@ function toggleVoice(){
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  BACKGROUND MUSIC (YouTube embed, hidden iframe)
+//  BACKGROUND MUSIC (YouTube IFrame API)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let musicEnabled=false;
-let musicIframe=null;
+let musicPlayer=null;
 let musicSearchTimer=null;
+let youtubeApiReady=false;
+
+function onYouTubeIframeAPIReady(){
+  youtubeApiReady=true;
+  initMusicPlayer();
+}
+
+function initMusicPlayer(){
+  if(!youtubeApiReady||musicPlayer) return;
+  musicPlayer=new YT.Player('yt-player',{
+    height:'1',
+    width:'1',
+    videoId:'',
+    events:{
+      'onReady':onPlayerReady,
+      'onStateChange':onPlayerStateChange
+    }
+  });
+}
+
+function onPlayerReady(){
+  const vol=parseInt(localStorage.getItem('elysi_music_vol')||'40');
+  if(musicPlayer) musicPlayer.setVolume(vol);
+}
+
+function onPlayerStateChange(e){}
 
 function getMusicFrame(){
-  if(!musicIframe){
-    musicIframe=document.createElement('iframe');
-    musicIframe.style.cssText='position:fixed;bottom:-9999px;left:-9999px;width:1px;height:1px;border:none;';
-    musicIframe.allow='autoplay';
-    document.body.appendChild(musicIframe);
+  if(!youtubeApiReady){
+    initMusicPlayer();
+    setTimeout(getMusicFrame, 500);
+    return null;
   }
-  return musicIframe;
+  return musicPlayer;
 }
 
 // Hardcoded OST queries for known worlds — no API call needed
@@ -2243,15 +2270,16 @@ function searchAndPlayMusic(worldName){
 }
 
 function playCustomMusic_forWorld(worldName, input){
-  const frame=getMusicFrame();
+  if(!youtubeApiReady){
+    setTimeout(()=>playCustomMusic_forWorld(worldName, input), 500);
+    return;
+  }
+  const player=getMusicFrame();
   const bar=$('music-bar');
   const title=$('music-title');
   const videoId=extractYouTubeId(input);
-  if(videoId){
-    frame.src=`https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}&controls=0&fs=0&modestbranding=1&rel=0`;
-  } else {
-    const encoded=encodeURIComponent(input);
-    frame.src=`https://www.youtube.com/embed?listType=search&list=${encoded}&autoplay=1&loop=1&controls=0&fs=0&modestbranding=1&rel=0`;
+  if(player&&videoId){
+    player.loadVideoById(videoId);
   }
   if(bar)bar.style.display='flex';
   if(title)title.textContent='♪ '+input.slice(0,35)+(input.length>35?'…':'');
@@ -2269,10 +2297,10 @@ function skipTrack(){
   };
   const worldId=getAllWorlds().find(w=>w.name===cachedWorld.world_name)?.id||'';
   const list=alts[worldId];
-  const frame=getMusicFrame();
-  if(list){
+  const player=getMusicFrame();
+  if(list&&player){
     const pick=list[Math.floor(Math.random()*list.length)];
-    frame.src=`https://www.youtube.com/embed/${pick}?autoplay=1&loop=1&playlist=${pick}&controls=0&fs=0&modestbranding=1&rel=0`;
+    player.loadVideoById(pick);
   } else {
     // For worlds without alternates, just re-trigger main track
     searchAndPlayMusic(cachedWorld.world_name);
@@ -2311,24 +2339,22 @@ function playCustomMusic(){
     if(btn){btn.textContent='🎵';btn.style.borderColor='var(--accent)';btn.style.color='var(--accent)';}
   }
 
-  const frame=getMusicFrame();
+  if(!youtubeApiReady){
+    setTimeout(playCustomMusic, 500);
+    return;
+  }
+  const player=getMusicFrame();
   const bar=$('music-bar');
   const title=$('music-title');
 
   const videoId=extractYouTubeId(input);
-  if(videoId){
-    // Direct video embed
-    frame.src=`https://www.youtube.com/embed/${videoId}?autoplay=1&loop=1&playlist=${videoId}&controls=0&fs=0&modestbranding=1&rel=0`;
+  if(videoId&&player){
+    player.loadVideoById(videoId);
     if(bar)bar.style.display='flex';
     if(title)title.textContent='Custom track';
     toast('🎵 Playing custom track','ok');
-  } else {
-    // Treat as search query
-    const encoded=encodeURIComponent(input);
-    frame.src=`https://www.youtube.com/embed?listType=search&list=${encoded}&autoplay=1&loop=1&controls=0&fs=0&modestbranding=1&rel=0`;
-    if(bar)bar.style.display='flex';
-    if(title)title.textContent=input.slice(0,40)+(input.length>40?'…':'');
-    toast('🎵 Searching: '+input.slice(0,30),'ok');
+  } else if(player){
+    toast('🎵 YouTube API search not available, please use direct video IDs or URLs','ok');
   }
   // Save as custom override for this world so it persists on skip
   if(cachedWorld?.world_name) localStorage.setItem('elysi_music_'+cachedWorld.world_name, input);
@@ -2336,20 +2362,15 @@ function playCustomMusic(){
 }
 
 function stopMusic(){
-  if(musicIframe){musicIframe.src='about:blank';}
+  if(musicPlayer&&youtubeApiReady){musicPlayer.stopVideo();}
   const bar=$('music-bar');if(bar)bar.style.display='none';
 }
 
 function setMusicVolume(val){
-  // YouTube iframe API volume control via postMessage
-  if(!musicIframe||!musicIframe.contentWindow)return;
-  try{
-    musicIframe.contentWindow.postMessage(JSON.stringify({
-      event:'command',func:'setVolume',args:[parseInt(val)]
-    }),'*');
-  }catch(e){}
-  // Store preference
   localStorage.setItem('elysi_music_vol',val);
+  if(musicPlayer&&youtubeApiReady){
+    musicPlayer.setVolume(parseInt(val));
+  }
 }
 
 function toggleMusic(){
