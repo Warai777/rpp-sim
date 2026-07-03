@@ -381,6 +381,7 @@
     <div class="sb-block">
       <div class="sb-block-title">Vitals</div>
       <div class="srow"><span class="slb">HP</span><span class="svl hp" id="s-hp">—</span></div>
+      <div id="s-conditions"></div>
       <div class="srow"><span class="slb" id="sb-cur-label">Currency</span><span class="svl cur" id="s-berry">—</span></div>
     </div>
 
@@ -609,8 +610,9 @@ function parseStatusEffects(dmText){
   const lower=dmText.toLowerCase();
   statusKeywords.forEach(s=>{if(lower.includes(s))found.push(s);});
 
-  if(curGS?.hp<50&&!found.includes('injured')) found.push('injured');
-  if(curGS?.hp<20&&!found.includes('bleeding')) found.push('bleeding');
+  const _hpPct=curGS?.hp!=null?curGS.hp/getMaxHP()*100:100;
+  if(_hpPct<50&&!found.includes('injured')) found.push('injured');
+  if(_hpPct<20&&!found.includes('bleeding')) found.push('bleeding');
 
   const newStatuses=JSON.stringify(found.sort());
   const oldStatuses=JSON.stringify(portraitStatuses.sort());
@@ -808,6 +810,8 @@ const TABS=['anime','manhwa','lightnovel','comics','tv','movies','games','books'
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let selWorld=null, curWorldId=null, curGS=null, curPS=null, busy=false;
 let curVSB={tier:'—',attack_potency:'—',speed:'—',durability:'—',intelligence:'—',powers:'—'};
+let curVSBFull=null; // full cached profile (stats+abilities+weaknesses) for the vsb modal, tied to curVSBWorldId
+let curVSBWorldId=null;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  SETTINGS
@@ -1064,6 +1068,9 @@ function stripStatTags(text){
     .replace(/\[DUR:\s*[^\]]+\]/gi,'')
     .replace(/\[INT:\s*[^\]]+\]/gi,'')
     .replace(/\[POWERS:\s*[^\]]+\]/gi,'')
+    .replace(/\[INJURY:\s*[^\]]+\]/gi,'')
+    .replace(/\[DOT:\s*[^\]]+\]/gi,'')
+    .replace(/\[HEAL:\s*[^\]]+\]/gi,'')
     .replace(/\n{3,}/g,'\n\n')
     .trim();
 }
@@ -1422,7 +1429,7 @@ starting_hp: INTEGER based on physical description. Average=100, athletic=120-15
     const [world]=await sbP('worlds',{world_name:selWorld.name,genre:selWorld.genre,dm_system_prompt:dmPr,canon_rules:fullCanon,user_id:currentUser?.id||null});
     const wid=world.id;
     await sbP('game_state',{world_id:wid,hp:startingHp,berry:startingCurrency,power_stage:'Unknown',current_day:1,current_location:gen.starting_location||selWorld.name,current_time_of_day:gen.starting_time||'Morning'});
-    await sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}|CUR:${gen.currency_name||'Gold'}|ARC:${detectedArc}|DEATH:${deathMode}`});
+    await sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}|CUR:${gen.currency_name||'Gold'}|ARC:${detectedArc}|DEATH:${deathMode}|MAXHP:${startingHp}`});
     toast('World created!','ok');enterWorld(wid,true);
   }catch(e){toast(e.message,'err');btn.disabled=false;btn.innerHTML='Begin Adventure ↵';}
 }
@@ -1432,6 +1439,7 @@ starting_hp: INTEGER based on physical description. Average=100, athletic=120-15
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function enterWorld(wid,opening=false){
   curWorldId=wid;nav('game');$('game-log').innerHTML='';$('action-options').style.display='none';
+  if(curVSBWorldId!==wid){curVSBFull=null;curVSBWorldId=wid;}
   cachedWorld=null;cachedOrders=null;
   try{
     const [[world],[gs],[ps]]=await Promise.all([sbG('worlds',`id=eq.${wid}&select=*`),sbG('game_state',`world_id=eq.${wid}&select=*`),sbG('power_system',`world_id=eq.${wid}&select=*`)]);
@@ -1489,7 +1497,15 @@ function updateSB(){
   const _cur=_cm?_cm[1].trim():getCurrency();
   $('sb-cur-label').textContent=_cur;
   $('shop-currency').textContent=_cur;
-  $('s-hp').textContent=g.hp??'—';
+  if(g.hp!=null){
+    const maxHp=getMaxHP();
+    $('s-hp').textContent=Math.max(0,Math.round(g.hp/maxHp*100))+'%';
+  }else{
+    $('s-hp').textContent='—';
+  }
+  const _effects=getEffects();
+  const _condEl=$('s-conditions');
+  if(_condEl)_condEl.innerHTML=_effects.length?_effects.map(e=>`<div style="font-size:10px;color:${e.dot?'var(--red)':'var(--amber)'};margin-top:4px;">${e.dot?'🩸':'🩹'} ${esc(e.n)}${e.dot?` (−${e.dot}%/action)`:''}</div>`).join(''):'';
   $('s-berry').textContent=g.berry!=null?Number(g.berry).toLocaleString():'—';
   $('s-loc').textContent=g.current_location||'—';$('s-day').textContent=g.current_day||1;
   $('s-time').textContent=g.current_time_of_day||'—';$('s-prog').textContent=g.power_stage||'—';
@@ -1581,7 +1597,7 @@ async function sendAction(text){
       sbP('conversation_history',{world_id:curWorldId,role:'user',content:userContent,scene_number:gs?.current_day||1}),
       sbP('conversation_history',{world_id:curWorldId,role:'assistant',content:dm,scene_number:gs?.current_day||1})
     ]);
-    parseStats(dm);
+    parseStats(dm).then(()=>tickConditions());
     consumeItems(dm, inv);
     autoRemember(dm);
     parseStatusEffects(dm);
@@ -1664,7 +1680,9 @@ Keep each under 12 words. Vary tone — one direct, one cautious, one unexpected
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function buildCtx(gs,ps,orders,inv,al,canon){
   const p=['=== CURRENT STATE ==='];
-  if(gs)p.push(`HP:${gs.hp} | Currency:${gs.berry} | Day:${gs.current_day} | Location:${gs.current_location} | Time:${gs.current_time_of_day} | Power Stage:${gs.power_stage}`);
+  if(gs)p.push(`HP:${gs.hp}/${getMaxHP()} (${Math.max(0,Math.round(gs.hp/getMaxHP()*100))}%) | Currency:${gs.berry} | Day:${gs.current_day} | Location:${gs.current_location} | Time:${gs.current_time_of_day} | Power Stage:${gs.power_stage}`);
+  const _activeEffects=getEffects();
+  if(_activeEffects.length)p.push(`Active Conditions: ${_activeEffects.map(e=>e.dot?`${e.n} (draining ${e.dot}%/action)`:e.n).join(', ')}`);
   if(curVSB.tier!=='—')p.push(`VS Battles — Tier:${curVSB.tier} | ATK:${curVSB.attack_potency} | SPD:${curVSB.speed} | DUR:${curVSB.durability} | INT:${curVSB.intelligence}`);
   if(ps)p.push(`Power System:${ps.system_name} | Level:${ps.current_level} | Abilities:${ps.special_abilities}`);
   if(ps?.notes)p.push(`Character:${ps.notes}`);
@@ -1696,8 +1714,59 @@ CONTINUITY — CRITICAL:
 - NEVER reset a scene, re-introduce a character the player has already met, or repeat information already established.
 - Track what has happened and what has been said. Build forward, never backward.
 ARC TRANSITIONS: When the story moves into a new arc, include [NEW_ARC: arc name]. Only use when a major transition actually occurs.
-MEMORY TAGS: [REMEMBER: fact] — saves important facts to permanent memory. Only use when genuinely important.`);
+MEMORY TAGS: [REMEMBER: fact] — saves important facts to permanent memory. Only use when genuinely important.
+CONDITION TAGS — for wounds and ailments, shown on the player's sidebar until healed:
+[INJURY: name] — a specific lasting wound (e.g. "Broken Rib", "Sprained Ankle") from something that just happened. Pair it with an [HP: X] tag reflecting the immediate damage. No further automatic HP loss — it just stays visible until treated.
+[DOT: name|percent] — an ongoing affliction (poison, bleeding, burning) that should keep draining HP on its own. percent = whole number 1-5 = % of max HP lost automatically after every subsequent player action until healed.
+[HEAL: name] — removes a previously applied [INJURY:] or [DOT:] condition the moment it's narrated as treated, cured, or healed. Must exactly match the name used when it was applied.
+Only use these when a wound or ailment is genuinely established in the narration — don't invent conditions casually.`);
   return p.join('\n');
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  MAX HP + CONDITIONS
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function getMaxHP(){
+  const m=curPS?.notes?.match(/MAXHP:(\d+)/);
+  if(m) return parseInt(m[1])||100;
+  return curGS?.hp||100;
+}
+
+const _effectsRx=()=>/EFFECTS:(\[[\s\S]*\])\s*$/;
+
+function getEffects(){
+  const m=curPS?.notes?.match(_effectsRx());
+  if(!m) return [];
+  try{const arr=JSON.parse(m[1]);return Array.isArray(arr)?arr:[];}catch(e){return [];}
+}
+
+async function setEffects(effects){
+  if(!curPS) return;
+  let notes=curPS.notes||'';
+  const json=JSON.stringify(effects);
+  const rx=_effectsRx();
+  notes=rx.test(notes)?notes.replace(rx,'EFFECTS:'+json):notes+(notes?'|':'')+'EFFECTS:'+json;
+  curPS.notes=notes;
+  try{await sbPa('power_system',`world_id=eq.${curWorldId}`,{notes});}catch(e){}
+}
+
+async function tickConditions(){
+  const effects=getEffects();
+  const dotEffects=effects.filter(e=>e.dot>0);
+  if(!dotEffects.length||!curGS) return;
+  const maxHp=getMaxHP();
+  const totalPct=dotEffects.reduce((s,e)=>s+e.dot,0);
+  const dmg=Math.max(1,Math.round(totalPct/100*maxHp));
+  const newHp=Math.max(0,(curGS.hp||0)-dmg);
+  try{await sbPa('game_state',`world_id=eq.${curWorldId}`,{hp:newHp});}catch(e){}
+  curGS.hp=newHp;
+  updateSB();
+  if(newHp<=0&&curPS){
+    const deathM=curPS.notes?.match(/DEATH:([^|$\n]+)/);
+    const deathMode=deathM?deathM[1].trim():'easy';
+    if(deathMode==='permadeath') setTimeout(()=>handlePermadeath(),2000);
+    else setTimeout(()=>handleEasyDeath(),1500);
+  }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1723,14 +1792,38 @@ async function parseStats(text){
     }
   }
   const pn=m(/\[POWER_SYSTEM:\s*([^\]]+)\]/i),pl=m(/\[POWER_LEVEL:\s*([^\]]+)\]/i);
-  if(pn||pl){const pu={};if(pn){pu.system_name=pn;if(curPS)curPS.system_name=pn;}if(pl){pu.current_level=pl;if(curPS)curPS.current_level=pl;}try{await sbPa('power_system',`world_id=eq.${curWorldId}`,pu);updateSB();}catch(e){}}
+  if(pn||pl){const pu={};if(pn){pu.system_name=pn;if(curPS)curPS.system_name=pn;}if(pl){pu.current_level=pl;if(curPS)curPS.current_level=pl;}try{await sbPa('power_system',`world_id=eq.${curWorldId}`,pu);updateSB();}catch(e){}curVSBFull=null;}
   const tier=m(/\[TIER:\s*([^\]]+)\]/i),atk=m(/\[ATK:\s*([^\]]+)\]/i),spd=m(/\[SPD:\s*([^\]]+)\]/i),dur=m(/\[DUR:\s*([^\]]+)\]/i),int=m(/\[INT:\s*([^\]]+)\]/i),pows=m(/\[POWERS:\s*([^\]]+)\]/i);
   if(tier||atk||spd||dur||int||pows){
     if(tier)curVSB.tier=tier;if(atk)curVSB.attack_potency=atk;if(spd)curVSB.speed=spd;if(dur)curVSB.durability=dur;if(int)curVSB.intelligence=int;if(pows)curVSB.powers=pows;
     updateSB();
+    curVSBFull=null; // story-driven stat change — full sheet must regenerate next open
   }
   const newArc=m(/\[NEW_ARC:\s*([^\]]+)\]/i);
   if(newArc) loadNewArc(newArc);
+
+  const injury=m(/\[INJURY:\s*([^\]]+)\]/i);
+  const dotMatch=text.match(/\[DOT:\s*([^\|\]]+)\|(\d+)\]/i);
+  const healTag=m(/\[HEAL:\s*([^\]]+)\]/i);
+  if(injury||dotMatch||healTag){
+    let effects=getEffects();
+    if(injury){
+      const nm=injury.replace(/\|/g,'').trim();
+      if(nm&&!effects.some(e=>e.n.toLowerCase()===nm.toLowerCase())) effects.push({n:nm,dot:0});
+    }
+    if(dotMatch){
+      const nm=dotMatch[1].replace(/\|/g,'').trim();
+      const pct=Math.max(1,parseInt(dotMatch[2])||1);
+      const existing=effects.find(e=>e.n.toLowerCase()===nm.toLowerCase());
+      if(existing) existing.dot=pct; else if(nm) effects.push({n:nm,dot:pct});
+    }
+    if(healTag){
+      const nm=healTag.replace(/\|/g,'').trim().toLowerCase();
+      effects=effects.filter(e=>e.n.toLowerCase()!==nm);
+    }
+    await setEffects(effects);
+    updateSB();
+  }
 }
 
 async function handlePermadeath(){
@@ -2060,6 +2153,65 @@ function scrollL(){const l=$('game-log');l.scrollTop=l.scrollHeight;}
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  MODALS
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function fetchVSBProfile(){
+  const gs=curGS,ps=curPS;
+  const [world]=await sbG('worlds',`id=eq.${curWorldId}&select=world_name,canon_rules`);
+  const {api}=cfg();
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':api,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-6',
+      max_tokens:900,
+      tools:[{type:'web_search_20250305',name:'web_search'}],
+      system:`You are a VS Battles Wiki editor creating a stat profile for a player character. Return ONLY raw JSON in this exact shape:
+{"tier":"...","attack_potency":"...","speed":"...","lifting_strength":"...","striking_strength":"...","durability":"...","stamina":"...","range":"...","intelligence":"...","powers_and_abilities":[{"name":"...","wiki_url":"... or NONE"}],"weaknesses":["...","..."]}
+
+RULES:
+1. Every stat value must be SHORT, matching real VS Battles Wiki phrasing (e.g. "Street level", "Below Average Human", "Standard melee range"). Do NOT add parenthetical explanations, reasoning, or justification — just the classification itself, 1-6 words, nothing more.
+2. For powers_and_abilities: only list abilities the character actually has. For each one, search vsbattles.fandom.com for a real page about that specific ability or technique. If a real page exists, put its exact URL in wiki_url. If no real page exists, put NONE — never guess or invent a URL.
+3. weaknesses: short phrases only, no reasoning attached.
+4. Base everything on the character's CURRENT power level in their story right now (per the data given), not their eventual peak.`,
+      messages:[{role:'user',content:`World: ${world?.world_name}\nCharacter: ${ps?.notes||'unknown'}\nCurrent power system: ${ps?.system_name} — ${ps?.current_level}\nSpecial abilities: ${ps?.special_abilities}\nHP: ${gs?.hp}\nVS data so far: ${JSON.stringify(curVSB)}`}]
+    })
+  });
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error?.message||'API error');
+  const raw=d.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n')||'';
+  const jsonMatch=raw.match(/\{[\s\S]*\}/);
+  if(!jsonMatch) throw new Error('No profile data in response — try again.');
+  return JSON.parse(jsonMatch[0]);
+}
+
+function renderVSBProfile(profile){
+  const body=$('mod-body');
+  const abilities=(Array.isArray(profile.powers_and_abilities)?profile.powers_and_abilities:[]).filter(p=>p?.wiki_url&&p.wiki_url.trim().toUpperCase()!=='NONE');
+  curVSB={tier:profile.tier||'—',attack_potency:profile.attack_potency||'—',speed:profile.speed||'—',durability:profile.durability||'—',intelligence:profile.intelligence||'—',powers:abilities.map(p=>p.name).join(', ')||'—'};
+  updateSB();
+  body.innerHTML=`
+    <div class="vsb-tier">${esc(profile.tier||'—')}</div>
+    <div class="vsb-row"><span class="vsb-label">Attack Potency</span><span class="vsb-val">${esc(profile.attack_potency||'—')}</span></div>
+    <div class="vsb-row"><span class="vsb-label">Speed</span><span class="vsb-val">${esc(profile.speed||'—')}</span></div>
+    <div class="vsb-row"><span class="vsb-label">Lifting Strength</span><span class="vsb-val">${esc(profile.lifting_strength||'—')}</span></div>
+    <div class="vsb-row"><span class="vsb-label">Striking Strength</span><span class="vsb-val">${esc(profile.striking_strength||'—')}</span></div>
+    <div class="vsb-row"><span class="vsb-label">Durability</span><span class="vsb-val">${esc(profile.durability||'—')}</span></div>
+    <div class="vsb-row"><span class="vsb-label">Stamina</span><span class="vsb-val">${esc(profile.stamina||'—')}</span></div>
+    <div class="vsb-row"><span class="vsb-label">Range</span><span class="vsb-val">${esc(profile.range||'—')}</span></div>
+    <div class="vsb-row"><span class="vsb-label">Intelligence</span><span class="vsb-val">${esc(profile.intelligence||'—')}</span></div>
+    <div class="vsb-row"><span class="vsb-label">Powers & Abilities</span><span class="vsb-val" style="color:var(--accent)">${abilities.length?abilities.map(p=>`<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 0;">${esc(p.name||'')}${vsbWikiTag(p.wiki_url)}</span>`).join('<br>'):'None documented on VS Battles Wiki'}</span></div>
+    <div class="vsb-row"><span class="vsb-label">Weaknesses</span><span class="vsb-val" style="color:var(--red)">${Array.isArray(profile.weaknesses)?profile.weaknesses.map(esc).join(', '):esc(profile.weaknesses||'None known')}</span></div>`;
+}
+
+async function regenerateVSBProfile(){
+  const body=$('mod-body');
+  body.innerHTML='<div style="text-align:center;padding:20px;"><span class="spin"></span></div>';
+  try{
+    const profile=await fetchVSBProfile();
+    curVSBFull=profile;curVSBWorldId=curWorldId;
+    renderVSBProfile(profile);
+  }catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
+}
+
 async function openMod(type){
   const body=$('mod-body'),foot=$('mod-foot'),title=$('mod-title'),inner=$('mod-inner');
   foot.style.display='none';foot.innerHTML='';inner.className='modal';
@@ -2068,50 +2220,16 @@ async function openMod(type){
 
   if(type==='vsb'){
     title.textContent='📊 VS Battles Profile';
-    const gs=curGS,ps=curPS;
-    try{
-      const [world]=await sbG('worlds',`id=eq.${curWorldId}&select=world_name,canon_rules`);
-      const {api}=cfg();
-      const r=await fetch('https://api.anthropic.com/v1/messages',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','x-api-key':api,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-        body:JSON.stringify({
-          model:'claude-sonnet-4-6',
-          max_tokens:900,
-          tools:[{type:'web_search_20250305',name:'web_search'}],
-          system:`You are a VS Battles Wiki editor creating a stat profile for a player character. Return ONLY raw JSON in this exact shape:
-{"tier":"...","attack_potency":"...","speed":"...","lifting_strength":"...","striking_strength":"...","durability":"...","stamina":"...","range":"...","intelligence":"...","powers_and_abilities":[{"name":"...","wiki_url":"... or NONE"}],"weaknesses":["...","..."]}
-
-RULES:
-1. Every stat value must be SHORT, matching real VS Battles Wiki phrasing (e.g. "Street level", "Below Average Human", "Standard melee range"). Do NOT add parenthetical explanations, reasoning, or justification — just the classification itself, 1-6 words, nothing more.
-2. For powers_and_abilities: only list abilities the character actually has. For each one, search vsbattles.fandom.com for a real page about that specific ability or technique. If a real page exists, put its exact URL in wiki_url. If no real page exists, put NONE — never guess or invent a URL.
-3. weaknesses: short phrases only, no reasoning attached.
-4. Base everything on the character's CURRENT power level in their story right now (per the data given), not their eventual peak.`,
-          messages:[{role:'user',content:`World: ${world?.world_name}\nCharacter: ${ps?.notes||'unknown'}\nCurrent power system: ${ps?.system_name} — ${ps?.current_level}\nSpecial abilities: ${ps?.special_abilities}\nHP: ${gs?.hp}\nVS data so far: ${JSON.stringify(curVSB)}`}]
-        })
-      });
-      const d=await r.json();
-      if(!r.ok)throw new Error(d.error?.message||'API error');
-      const raw=d.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n')||'';
-      const jsonMatch=raw.match(/\{[\s\S]*\}/);
-      if(!jsonMatch) throw new Error('No profile data in response — try again.');
-      const profile=JSON.parse(jsonMatch[0]);
-      const abilities=(Array.isArray(profile.powers_and_abilities)?profile.powers_and_abilities:[]).filter(p=>p?.wiki_url&&p.wiki_url.trim().toUpperCase()!=='NONE');
-      curVSB={tier:profile.tier||'—',attack_potency:profile.attack_potency||'—',speed:profile.speed||'—',durability:profile.durability||'—',intelligence:profile.intelligence||'—',powers:abilities.map(p=>p.name).join(', ')||'—'};
-      updateSB();
-      body.innerHTML=`
-        <div class="vsb-tier">${esc(profile.tier||'—')}</div>
-        <div class="vsb-row"><span class="vsb-label">Attack Potency</span><span class="vsb-val">${esc(profile.attack_potency||'—')}</span></div>
-        <div class="vsb-row"><span class="vsb-label">Speed</span><span class="vsb-val">${esc(profile.speed||'—')}</span></div>
-        <div class="vsb-row"><span class="vsb-label">Lifting Strength</span><span class="vsb-val">${esc(profile.lifting_strength||'—')}</span></div>
-        <div class="vsb-row"><span class="vsb-label">Striking Strength</span><span class="vsb-val">${esc(profile.striking_strength||'—')}</span></div>
-        <div class="vsb-row"><span class="vsb-label">Durability</span><span class="vsb-val">${esc(profile.durability||'—')}</span></div>
-        <div class="vsb-row"><span class="vsb-label">Stamina</span><span class="vsb-val">${esc(profile.stamina||'—')}</span></div>
-        <div class="vsb-row"><span class="vsb-label">Range</span><span class="vsb-val">${esc(profile.range||'—')}</span></div>
-        <div class="vsb-row"><span class="vsb-label">Intelligence</span><span class="vsb-val">${esc(profile.intelligence||'—')}</span></div>
-        <div class="vsb-row"><span class="vsb-label">Powers & Abilities</span><span class="vsb-val" style="color:var(--accent)">${abilities.length?abilities.map(p=>`<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 0;">${esc(p.name||'')}${vsbWikiTag(p.wiki_url)}</span>`).join('<br>'):'None documented on VS Battles Wiki'}</span></div>
-        <div class="vsb-row"><span class="vsb-label">Weaknesses</span><span class="vsb-val" style="color:var(--red)">${Array.isArray(profile.weaknesses)?profile.weaknesses.map(esc).join(', '):esc(profile.weaknesses||'None known')}</span></div>`;
-    }catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
+    foot.style.display='flex';foot.innerHTML=`<button class="btn btn-sm" onclick="regenerateVSBProfile()">🔄 Regenerate</button>`;
+    if(curVSBFull&&curVSBWorldId===curWorldId){
+      renderVSBProfile(curVSBFull);
+    }else{
+      try{
+        const profile=await fetchVSBProfile();
+        curVSBFull=profile;curVSBWorldId=curWorldId;
+        renderVSBProfile(profile);
+      }catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
+    }
 
   } else if(type==='inv'){
     title.textContent='🎒 Inventory';
