@@ -473,13 +473,14 @@
       <button class="btn btn-ico btn-sm" onclick="closeShop()">✕</button>
     </div>
     <div class="mb">
-      <div class="shop-search">
-        <input type="text" id="shop-query" placeholder="Search for any item, ability, weapon, technique… (e.g. Sharingan, Devil Fruit, Lightsaber)" onkeydown="if(event.key==='Enter')searchShop()">
-        <button class="btn btn-p btn-sm" id="shop-btn" onclick="searchShop()">Search</button>
-      </div>
-      <div class="shop-search" style="margin-top:-8px;margin-bottom:16px;">
-        <input type="text" id="shop-url" placeholder="…or paste a Fandom page link directly (e.g. https://onepiece.fandom.com/wiki/...)" onkeydown="if(event.key==='Enter')searchShopByUrl()">
-        <button class="btn btn-sm" id="shop-url-btn" onclick="searchShopByUrl()">Fetch</button>
+      <div class="shop-search" style="position:relative;">
+        <div style="flex:1;position:relative;">
+          <input type="text" id="shop-query" placeholder="Search for any item, ability, weapon, technique… or paste a Fandom link" autocomplete="off"
+            onkeydown="if(event.key==='Enter'){hideShopSuggestions();searchShop();}"
+            oninput="onShopSearchInput(this.value)">
+          <div id="shop-suggestions" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border2);border-radius:var(--r);z-index:50;max-height:260px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);margin-top:3px;"></div>
+        </div>
+        <button class="btn btn-p btn-sm" id="shop-btn" onclick="hideShopSuggestions();searchShop()">Search</button>
       </div>
       <div id="shop-results"></div>
     </div>
@@ -542,6 +543,7 @@ function getCurrency(){
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let currentPortraitPrompt='';
 let portraitStatuses=[];
+let _portraitPreloadFired=false;
 
 async function generatePortrait(appearance, worldName, statusEffects=[]){
   const wrap=$('char-portrait-wrap');
@@ -1184,7 +1186,10 @@ async function loadWorlds(){
 
 async function delWorld(e,id){
   e.stopPropagation();if(!confirm('Delete world and all data?'))return;
-  try{for(const t of ['conversation_history','inventory','standing_orders','session_log','power_system','allies','game_state'])await sbD(t,`world_id=eq.${id}`).catch(()=>{});await sbD('worlds',`id=eq.${id}`);toast('Deleted','ok');loadWorlds();}catch(e){toast(e.message,'err');}
+  try{
+    await Promise.all(['conversation_history','inventory','standing_orders','session_log','power_system','allies','game_state'].map(t=>sbD(t,`world_id=eq.${id}`).catch(()=>{})));
+    await sbD('worlds',`id=eq.${id}`);toast('Deleted','ok');loadWorlds();
+  }catch(e){toast(e.message,'err');}
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1378,6 +1383,9 @@ async function createAndBegin(){
   if(!selWorld){toast('No world selected','err');return;}
   const {api}=cfg();if(!api){toast('Add your API key in Settings','err');openSettings();return;}
   const btn=$('begin-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Building world…';
+  // Kick off portrait generation immediately — it only needs appearance+world name,
+  // both already known, so it can run fully in parallel with the world/arc generation below.
+  if(app){_portraitPreloadFired=true;generatePortrait(app, selWorld.name, []);}
   try{
     btn.innerHTML='<span class="spin"></span> Loading world lore…';
     const searchRes=await fetch('https://api.anthropic.com/v1/messages',{
@@ -1427,8 +1435,10 @@ starting_hp: INTEGER based on physical description. Average=100, athletic=120-15
 
     const [world]=await sbP('worlds',{world_name:selWorld.name,genre:selWorld.genre,dm_system_prompt:dmPr,canon_rules:fullCanon,user_id:currentUser?.id||null});
     const wid=world.id;
-    await sbP('game_state',{world_id:wid,hp:startingHp,berry:startingCurrency,power_stage:'Unknown',current_day:1,current_location:gen.starting_location||selWorld.name,current_time_of_day:gen.starting_time||'Morning'});
-    await sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}|CUR:${gen.currency_name||'Gold'}|ARC:${detectedArc}|DEATH:${deathMode}|MAXHP:${startingHp}`});
+    await Promise.all([
+      sbP('game_state',{world_id:wid,hp:startingHp,berry:startingCurrency,power_stage:'Unknown',current_day:1,current_location:gen.starting_location||selWorld.name,current_time_of_day:gen.starting_time||'Morning'}),
+      sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}|CUR:${gen.currency_name||'Gold'}|ARC:${detectedArc}|DEATH:${deathMode}|MAXHP:${startingHp}`})
+    ]);
     toast('World created!','ok');enterWorld(wid,true);
   }catch(e){toast(e.message,'err');btn.disabled=false;btn.innerHTML='Begin Adventure ↵';}
 }
@@ -1456,7 +1466,8 @@ async function enterWorld(wid,opening=false){
     const pap=ps?.notes?.match(/A:([^|]+)/);
     if(pap){
       portraitStatuses=[];
-      generatePortrait(pap[1].trim(), world.world_name, []);
+      if(_portraitPreloadFired) _portraitPreloadFired=false; // already kicked off in createAndBegin, in parallel with world generation
+      else generatePortrait(pap[1].trim(), world.world_name, []);
     }
     if(opening){addSys('The world takes shape…');await genOpening(world,gs,ps);}
     // Start background music if enabled
@@ -1613,10 +1624,10 @@ function sendFree(){const inp=$('act-inp'),text=inp.value.trim();if(!text)return
 async function consumeItems(dmText, inv){
   if(!inv?.length) return;
   const matches=[...dmText.matchAll(/\[USE_ITEM:\s*([^\]]+)\]/gi)];
-  for(const match of matches){
+  await Promise.all(matches.map(async match=>{
     const usedName=match[1].trim().toLowerCase();
     const item=inv.find(i=>i.item_name.toLowerCase()===usedName||usedName.includes(i.item_name.toLowerCase()));
-    if(!item) continue;
+    if(!item) return;
     try{
       if(item.quantity>1){
         await sbPa('inventory',`id=eq.${item.id}`,{quantity:item.quantity-1});
@@ -1626,23 +1637,21 @@ async function consumeItems(dmText, inv){
         toast(`${item.item_name} used up — removed from inventory`,'ok');
       }
     }catch(e){console.error('Item consume error:',e);}
-  }
+  }));
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  AUTO REMEMBER
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function autoRemember(dmText){
-  const matches=[...dmText.matchAll(/\[REMEMBER:\s*([^\]]+)\]/gi)];
-  for(const match of matches){
-    const fact=match[1].trim();
-    if(!fact) continue;
+  const facts=[...dmText.matchAll(/\[REMEMBER:\s*([^\]]+)\]/gi)].map(m=>m[1].trim()).filter(Boolean);
+  await Promise.all(facts.map(async fact=>{
     try{
       await sbP('standing_orders',{world_id:curWorldId,rule_text:fact,category:'Memory'});
       cachedOrders=null;
       toast(`📌 Remembered: ${fact.slice(0,40)}${fact.length>40?'…':''}`, 'ok');
     }catch(e){console.error('autoRemember error:',e);}
-  }
+  }));
 }
 
 async function genOptions(dmText, world, playerAction=''){
@@ -1844,8 +1853,7 @@ async function handlePermadeath(){
 async function deleteWorldAndLeave(){
   if(!curWorldId)return;
   try{
-    for(const t of ['conversation_history','inventory','standing_orders','power_system','allies','game_state'])
-      await sbD(t,`world_id=eq.${curWorldId}`).catch(()=>{});
+    await Promise.all(['conversation_history','inventory','standing_orders','power_system','allies','game_state'].map(t=>sbD(t,`world_id=eq.${curWorldId}`).catch(()=>{})));
     await sbD('worlds',`id=eq.${curWorldId}`);
   }catch(e){}
   curWorldId=null;cachedWorld=null;cachedOrders=null;
@@ -1858,9 +1866,11 @@ async function handleEasyDeath(){
   $('game-log').innerHTML='';
   addSys(`💀 You have fallen… but this is not the end.`);
   addSys(`You wake up at the start of the ${arcName}. Battered. Alive. The story continues.`);
-  await sbPa('game_state',`world_id=eq.${curWorldId}`,{hp:50});
   if(curGS)curGS.hp=50;
-  await sbD('conversation_history',`world_id=eq.${curWorldId}`).catch(()=>{});
+  await Promise.all([
+    sbPa('game_state',`world_id=eq.${curWorldId}`,{hp:50}),
+    sbD('conversation_history',`world_id=eq.${curWorldId}`).catch(()=>{})
+  ]);
   updateSB();
   setTimeout(()=>enterWorld(curWorldId,true),1500);
 }
@@ -1935,6 +1945,58 @@ function renderShopCard(item, i, badgesHtml, recommended){
     </div>`;
 }
 
+// Live search against the actual Fandom wiki for the current world, when we can
+// guess the right subdomain (MediaWiki's opensearch API allows CORS via origin=*).
+// Falls back silently to nothing — the AI-search path via the Search button always still works.
+function guessFandomSlug(worldName){
+  if(!worldName) return null;
+  return worldName.toLowerCase().replace(/[^a-z0-9]+/g,'');
+}
+
+let shopSuggestTimer=null;
+let shopSuggestSeq=0;
+
+function onShopSearchInput(val){
+  clearTimeout(shopSuggestTimer);
+  const q=val.trim();
+  if(/^https?:\/\//i.test(q)||q.length<2){hideShopSuggestions();return;}
+  shopSuggestTimer=setTimeout(()=>fetchShopSuggestions(q),300);
+}
+
+async function fetchShopSuggestions(q){
+  const slug=guessFandomSlug(cachedWorld?.world_name);
+  if(!slug) return;
+  const seq=++shopSuggestSeq;
+  try{
+    const r=await fetch(`https://${slug}.fandom.com/api.php?action=opensearch&search=${encodeURIComponent(q)}&format=json&origin=*&limit=6`);
+    if(!r.ok) return;
+    const d=await r.json();
+    if(seq!==shopSuggestSeq) return; // a newer keystroke already superseded this request
+    const titles=d[1]||[],urls=d[3]||[];
+    if(!titles.length){hideShopSuggestions();return;}
+    showShopSuggestions(titles.map((t,i)=>({title:t,url:urls[i]})));
+  }catch(e){/* subdomain guess was wrong or offline — fail silently, AI search still works */}
+}
+
+function showShopSuggestions(items){
+  const box=$('shop-suggestions');
+  box.innerHTML=items.map(it=>`
+    <div onclick="pickShopSuggestion('${esc(it.url)}')" style="padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background=''">
+      📖 ${esc(it.title)}
+    </div>`).join('');
+  box.style.display='block';
+}
+
+function hideShopSuggestions(){
+  const box=$('shop-suggestions');if(box){box.style.display='none';box.innerHTML='';}
+}
+
+function pickShopSuggestion(url){
+  hideShopSuggestions();
+  $('shop-query').value=url;
+  searchShopByUrl(url);
+}
+
 async function openShop(){
   $('shop-ov').classList.add('open');
   $('shop-results').innerHTML='';
@@ -1957,6 +2019,7 @@ function parseShopText(raw, curName){
 
 async function searchShop(){
   const q=$('shop-query').value.trim();if(!q)return;
+  if(/^https?:\/\//i.test(q)) return searchShopByUrl(q);
   const btn=$('shop-btn');btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
   $('shop-results').innerHTML='<div style="text-align:center;padding:20px;"><span class="spin"></span><div style="font-size:11px;color:var(--text3);margin-top:8px;">Searching the Archive of Fiction…</div></div>';
   shopItems=[];
@@ -2037,10 +2100,10 @@ CRITICAL: Only return items that actually exist in real fiction, with a real fan
   finally{btn.innerHTML='Search';btn.disabled=false;}
 }
 
-async function searchShopByUrl(){
-  const url=$('shop-url').value.trim();if(!url)return;
+async function searchShopByUrl(url){
+  url=(url||$('shop-query').value).trim();if(!url)return;
   if(!/^https?:\/\//i.test(url)){toast('Enter a valid page URL','err');return;}
-  const btn=$('shop-url-btn');btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
+  const btn=$('shop-btn');btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
   $('shop-results').innerHTML='<div style="text-align:center;padding:20px;"><span class="spin"></span><div style="font-size:11px;color:var(--text3);margin-top:8px;">Reading the page…</div></div>';
   shopItems=[];
   try{
@@ -2105,7 +2168,7 @@ CRITICAL: Base the description only on what is actually on that page. If the pag
       `<span style="font-size:10px;color:var(--green);background:rgba(76,175,130,.15);padding:1px 6px;border-radius:3px;">✓ From Fandom</span>${item.canon_source!==world?.world_name?` <span style="font-size:10px;color:var(--cyan);background:rgba(74,184,212,.1);padding:1px 6px;border-radius:3px;">Cross-world</span>`:''}`,
       false);
   }catch(e){$('shop-results').innerHTML=`<div style="color:var(--red);padding:16px;">${esc(e.message)}</div>`;}
-  finally{btn.innerHTML='Fetch';btn.disabled=false;}
+  finally{btn.innerHTML='Search';btn.disabled=false;}
 }
 
 async function buyItem(i){
@@ -2116,9 +2179,11 @@ async function buyItem(i){
   if(!confirm(`Buy ${item.name} for ${price.toLocaleString()} ${item.currency||''}?`))return;
   try{
     const newBerry=curGS.berry-price;
-    await sbPa('game_state',`world_id=eq.${curWorldId}`,{berry:newBerry});
     curGS.berry=newBerry;updateSB();
-    await sbP('inventory',{world_id:curWorldId,item_name:item.name,status:'Owned',notes:(item.description||'')+(item.canon_source?' (From: '+item.canon_source+')':''),quantity:1});
+    await Promise.all([
+      sbPa('game_state',`world_id=eq.${curWorldId}`,{berry:newBerry}),
+      sbP('inventory',{world_id:curWorldId,item_name:item.name,status:'Owned',notes:(item.description||'')+(item.canon_source?' (From: '+item.canon_source+')':''),quantity:1})
+    ]);
     addD(`*You acquire ${item.name} from the Universal Shop. ${item.description||''}*`,true,false);
     toast('Purchased! Added to inventory.','ok');
     closeShop();
