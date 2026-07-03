@@ -408,7 +408,6 @@
       <button class="btn btn-sm" onclick="openShop()">🛒 Universal Shop</button>
       <button class="btn btn-sm" onclick="openMod('inv')">🎒 Inventory</button>
       <button class="btn btn-sm" onclick="openMod('allies')">👥 Allies</button>
-      <button class="btn btn-sm" onclick="openMod('orders')">📋 Standing Orders</button>
     </div>
     <div class="sb-back"><button class="btn btn-sm" style="width:100%;" onclick="leaveGame()">← All Worlds</button></div>
   </div>
@@ -1714,7 +1713,10 @@ CONTINUITY — CRITICAL:
 - NEVER reset a scene, re-introduce a character the player has already met, or repeat information already established.
 - Track what has happened and what has been said. Build forward, never backward.
 ARC TRANSITIONS: When the story moves into a new arc, include [NEW_ARC: arc name]. Only use when a major transition actually occurs.
-MEMORY TAGS: [REMEMBER: fact] — saves important facts to permanent memory. Only use when genuinely important.
+MEMORY TAGS: [REMEMBER: fact] — permanently saves something you must keep respecting on every future turn. There is no other way for the player to set standing instructions, so use this proactively for two kinds of things:
+(a) Important continuity facts — secrets learned, promises made, deals struck, items given away, injuries sustained.
+(b) Any explicit preference or instruction the player states about how they want the story run (e.g. "always describe combat in graphic detail", "never let NPCs recognize my disguise", "fade to black on romance scenes"). Capture these the moment they're stated, don't wait to be told twice.
+Skip trivial one-off details that don't need to persist.
 CONDITION TAGS — for wounds and ailments, shown on the player's sidebar until healed:
 [INJURY: name] — a specific lasting wound (e.g. "Broken Rib", "Sprained Ankle") from something that just happened. Pair it with an [HP: X] tag reflecting the immediate damage. No further automatic HP loss — it just stays visible until treated.
 [DOT: name|percent] — an ongoing affliction (poison, bleeding, burning) that should keep draining HP on its own. percent = whole number 1-5 = % of max HP lost automatically after every subsequent player action until healed.
@@ -2239,18 +2241,12 @@ async function openMod(type){
     title.textContent='👥 Allies';
     try{const al=await sbG('allies',`world_id=eq.${curWorldId}&select=*`);body.innerHTML=al?.length?al.map(a=>`<div style="padding:11px 0;border-bottom:1px solid var(--border)"><div style="font-size:14px;font-weight:600;">${esc(a.name)}</div><div style="font-size:11px;color:var(--accent);margin-bottom:3px;">${esc(a.relationship||'')}</div><div style="font-size:12px;color:var(--text2);">${esc(a.status||'')}${a.abilities?' — '+esc(a.abilities):''}</div>${a.notes?`<div style="font-size:11px;color:var(--text3);margin-top:2px;">${esc(a.notes)}</div>`:''}</div>`).join(''):'<div style="color:var(--text3);text-align:center;padding:20px">No allies yet</div>';}catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
 
-  } else if(type==='orders'){
-    title.textContent='📋 Standing Orders';foot.style.display='flex';foot.innerHTML=`<button class="btn btn-p btn-sm" onclick="addOrder()">+ Add</button>`;
-    try{const ord=await sbG('standing_orders',`world_id=eq.${curWorldId}&select=*`);body.innerHTML=ord?.length?ord.map(o=>`<div class="irow"><div style="flex:1"><div style="font-size:13px;">${esc(o.rule_text)}</div><div style="font-size:11px;color:var(--text3);">${esc(o.category||'')}</div></div><button class="btn btn-sm btn-d" onclick="delOrder('${o.id}')">✕</button></div>`).join(''):'<div style="color:var(--text3);text-align:center;padding:20px">No standing orders</div>';}catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
-
   } else if(type==='log'){
     title.textContent='📖 Session Log';
     try{const logs=await sbG('session_log',`world_id=eq.${curWorldId}&select=*&order=created_at.desc&limit=20`);body.innerHTML=logs?.length?logs.map(l=>`<div style="padding:11px 0;border-bottom:1px solid var(--border)"><div style="font-size:11px;color:var(--text3);margin-bottom:3px;">Day ${l.day} · ${esc(l.location||'')}</div><div style="font-size:13px;">${esc(l.what_happened||'')}</div></div>`).join(''):'<div style="color:var(--text3);text-align:center;padding:20px">No entries yet</div>';}catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
   }
 }
 function closeMod(){$('mod-ov').classList.remove('open');}
-async function addOrder(){const rule=prompt('Standing order rule:');if(!rule)return;const cat=prompt('Category:')||'General';try{await sbP('standing_orders',{world_id:curWorldId,rule_text:rule,category:cat});openMod('orders');}catch(e){toast(e.message,'err');}}
-async function delOrder(id){if(!confirm('Delete?'))return;try{await sbD('standing_orders',`id=eq.${id}`);openMod('orders');}catch(e){toast(e.message,'err');}}
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  MOBILE + INIT
