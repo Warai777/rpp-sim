@@ -197,6 +197,7 @@
     <div id="auth-login">
       <div class="auth-field"><label>Email</label><input type="email" id="login-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <div class="auth-field"><label>Password</label><input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div style="text-align:right;margin:-8px 0 14px;"><span style="font-size:12px;color:var(--accent);cursor:pointer;" onclick="showForgot()">Forgot password?</span></div>
       <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:4px;" id="login-btn" onclick="doLogin()">Sign In →</button>
     </div>
     <div id="auth-signup" style="display:none;">
@@ -204,6 +205,18 @@
       <div class="auth-field"><label>Email</label><input type="email" id="signup-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')doSignup()"></div>
       <div class="auth-field"><label>Password</label><input type="password" id="signup-pass" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')doSignup()"></div>
       <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:4px;" id="signup-btn" onclick="doSignup()">Create Account →</button>
+    </div>
+    <div id="auth-forgot" style="display:none;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">Enter your account email and we'll send you a link to reset your password.</div>
+      <div class="auth-field"><label>Email</label><input type="email" id="forgot-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')requestPasswordReset()"></div>
+      <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:4px;" id="forgot-btn" onclick="requestPasswordReset()">Send Reset Link →</button>
+      <div style="text-align:center;margin-top:14px;"><span style="font-size:12px;color:var(--text3);cursor:pointer;" onclick="hideForgot()">← Back to Sign In</span></div>
+    </div>
+    <div id="auth-reset" style="display:none;">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">Choose a new password for your account.</div>
+      <div class="auth-field"><label>New Password</label><input type="password" id="reset-pass" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')updatePassword()"></div>
+      <div class="auth-field"><label>Confirm Password</label><input type="password" id="reset-pass2" placeholder="Min 6 characters" onkeydown="if(event.key==='Enter')updatePassword()"></div>
+      <button class="btn btn-p" style="width:100%;justify-content:center;margin-top:4px;" id="reset-btn" onclick="updatePassword()">Update Password →</button>
     </div>
   </div>
 </div>
@@ -813,7 +826,79 @@ function switchAuthTab(tab,el){
   el.classList.add('active');
   $('auth-login').style.display=tab==='login'?'block':'none';
   $('auth-signup').style.display=tab==='signup'?'block':'none';
+  $('auth-forgot').style.display='none';
+  $('auth-reset').style.display='none';
   authErr('');
+}
+
+function showForgot(){
+  document.querySelectorAll('.auth-tab-btn').forEach(b=>b.classList.remove('active'));
+  $('auth-login').style.display='none';
+  $('auth-signup').style.display='none';
+  $('auth-reset').style.display='none';
+  $('auth-forgot').style.display='block';
+  authErr('');
+  const emailVal=$('login-email').value.trim();
+  if(emailVal)$('forgot-email').value=emailVal;
+}
+
+function hideForgot(){
+  $('auth-forgot').style.display='none';
+  switchAuthTab('login',document.querySelector('.auth-tab-btn'));
+}
+
+async function requestPasswordReset(){
+  const email=$('forgot-email').value.trim();
+  if(!email){authErr('Enter your account email.');return;}
+  const btn=$('forgot-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span>';
+  authErr('');
+  try{
+    await sbAuth('recover',{email,redirect_to:location.origin+location.pathname});
+    toast('Reset link sent — check your email','ok');
+  }catch(e){authErr(e.message);}
+  finally{btn.disabled=false;btn.innerHTML='Send Reset Link →';}
+}
+
+let recoveryToken=null;
+
+function checkRecoveryLink(){
+  const hash=location.hash;
+  if(!hash||!hash.includes('type=recovery'))return;
+  const params=new URLSearchParams(hash.slice(1));
+  const token=params.get('access_token');
+  if(!token)return;
+  recoveryToken=token;
+  document.querySelectorAll('.auth-tab-btn').forEach(b=>b.classList.remove('active'));
+  $('auth-login').style.display='none';
+  $('auth-signup').style.display='none';
+  $('auth-forgot').style.display='none';
+  $('auth-reset').style.display='block';
+  history.replaceState(null,'',location.pathname+location.search);
+}
+
+async function updatePassword(){
+  const p1=$('reset-pass').value,p2=$('reset-pass2').value;
+  if(!p1||p1.length<6){authErr('Password must be at least 6 characters.');return;}
+  if(p1!==p2){authErr('Passwords do not match.');return;}
+  if(!recoveryToken){authErr('Reset link expired. Please request a new one.');return;}
+  const {url,key}=cfg();
+  if(!url||!key){authErr('Configure Supabase in Settings first.');return;}
+  const btn=$('reset-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span>';
+  authErr('');
+  try{
+    const r=await fetch(url.replace(/\/$/,'')+'/auth/v1/user',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json','apikey':key,'Authorization':'Bearer '+recoveryToken},
+      body:JSON.stringify({password:p1})
+    });
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error_description||d.msg||d.error||'Reset failed');
+    recoveryToken=null;
+    toast('Password updated — please sign in','ok');
+    $('auth-reset').style.display='none';
+    switchAuthTab('login',document.querySelector('.auth-tab-btn'));
+  }catch(e){authErr(e.message);}
+  finally{btn.disabled=false;btn.innerHTML='Update Password →';}
 }
 
 async function sbAuth(path,body){
@@ -2407,8 +2492,10 @@ if(_ak&&!_ak.startsWith('__'))localStorage.setItem('elysi_api',_ak);
 if(_su&&!_su.startsWith('__'))localStorage.setItem('elysi_url',_su);
 if(_sk&&!_sk.startsWith('__'))localStorage.setItem('elysi_key',_sk);
 
+const _isRecovery=location.hash.includes('type=recovery');
+checkRecoveryLink();
 const _saved=localStorage.getItem('elysi_session');
-if(_saved){
+if(_saved&&!_isRecovery){
   try{currentUser=JSON.parse(_saved);enterApp();}
   catch(e){localStorage.removeItem('elysi_session');}
 }
