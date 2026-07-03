@@ -1821,6 +1821,11 @@ function vsbBtn(url){
   return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--amber);text-decoration:none;border:1px solid rgba(212,148,74,.3);border-radius:4px;padding:3px 8px;">⚔ Character on VS Battles</a>`;
 }
 
+function vsbWikiTag(url){
+  if(!url||url.trim().toUpperCase()==='NONE') return '';
+  return `<a href="${url}" target="_blank" rel="noopener" style="font-size:10px;color:var(--cyan);text-decoration:none;border:1px solid rgba(74,184,212,.3);border-radius:3px;padding:1px 5px;">⚔ wiki</a>`;
+}
+
 function renderShopCard(item, i, badgesHtml, recommended){
   return `
     <div class="shop-item"${recommended?' style="border-color:var(--accentD);"':''}>
@@ -2066,13 +2071,31 @@ async function openMod(type){
     const gs=curGS,ps=curPS;
     try{
       const [world]=await sbG('worlds',`id=eq.${curWorldId}&select=world_name,canon_rules`);
-      const raw=await callAI(`You are a VS Battles wiki editor. Generate an accurate VS Battles wiki-style profile for this character. Return ONLY raw JSON:
-{"tier":"e.g. 9-C","attack_potency":"e.g. Street level","speed":"e.g. Normal Human","lifting_strength":"e.g. Average Human","striking_strength":"e.g. Street Class","durability":"e.g. Street level","stamina":"e.g. Average","range":"e.g. Standard melee range","intelligence":"e.g. Average","powers_and_abilities":["Power 1","Power 2"],"weaknesses":["Weakness 1"]}
+      const {api}=cfg();
+      const r=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':api,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({
+          model:'claude-sonnet-4-6',
+          max_tokens:900,
+          tools:[{type:'web_search_20250305',name:'web_search'}],
+          system:`You are a VS Battles Wiki editor creating a stat profile for a player character. Return ONLY raw JSON in this exact shape:
+{"tier":"...","attack_potency":"...","speed":"...","lifting_strength":"...","striking_strength":"...","durability":"...","stamina":"...","range":"...","intelligence":"...","powers_and_abilities":[{"name":"...","wiki_url":"... or NONE"}],"weaknesses":["...","..."]}
 
-Use actual VS Battles tier notation. Be accurate to the character's current power level — NOT their peak canon level, but where they are NOW in their story based on the data provided.`,
-        [{role:'user',content:`World: ${world?.world_name}\nCharacter: ${ps?.notes||'unknown'}\nCurrent power system: ${ps?.system_name} — ${ps?.current_level}\nSpecial abilities: ${ps?.special_abilities}\nHP: ${gs?.hp}\nVS data so far: ${JSON.stringify(curVSB)}`}],600);
+RULES:
+1. Every stat value must be SHORT, matching real VS Battles Wiki phrasing (e.g. "Street level", "Below Average Human", "Standard melee range"). Do NOT add parenthetical explanations, reasoning, or justification — just the classification itself, 1-6 words, nothing more.
+2. For powers_and_abilities: only list abilities the character actually has. For each one, search vsbattles.fandom.com for a real page about that specific ability or technique. If a real page exists, put its exact URL in wiki_url. If no real page exists, put NONE — never guess or invent a URL.
+3. weaknesses: short phrases only, no reasoning attached.
+4. Base everything on the character's CURRENT power level in their story right now (per the data given), not their eventual peak.`,
+          messages:[{role:'user',content:`World: ${world?.world_name}\nCharacter: ${ps?.notes||'unknown'}\nCurrent power system: ${ps?.system_name} — ${ps?.current_level}\nSpecial abilities: ${ps?.special_abilities}\nHP: ${gs?.hp}\nVS data so far: ${JSON.stringify(curVSB)}`}]
+        })
+      });
+      const d=await r.json();
+      if(!r.ok)throw new Error(d.error?.message||'API error');
+      const raw=d.content?.filter(b=>b.type==='text').map(b=>b.text).join('\n')||'';
       const profile=JSON.parse(raw.replace(/```json|```/g,'').trim());
-      curVSB={tier:profile.tier||'—',attack_potency:profile.attack_potency||'—',speed:profile.speed||'—',durability:profile.durability||'—',intelligence:profile.intelligence||'—',powers:Array.isArray(profile.powers_and_abilities)?profile.powers_and_abilities.join(', '):'—'};
+      const abilities=(Array.isArray(profile.powers_and_abilities)?profile.powers_and_abilities:[]).filter(p=>p?.wiki_url&&p.wiki_url.trim().toUpperCase()!=='NONE');
+      curVSB={tier:profile.tier||'—',attack_potency:profile.attack_potency||'—',speed:profile.speed||'—',durability:profile.durability||'—',intelligence:profile.intelligence||'—',powers:abilities.map(p=>p.name).join(', ')||'—'};
       updateSB();
       body.innerHTML=`
         <div class="vsb-tier">${esc(profile.tier||'—')}</div>
@@ -2084,7 +2107,7 @@ Use actual VS Battles tier notation. Be accurate to the character's current powe
         <div class="vsb-row"><span class="vsb-label">Stamina</span><span class="vsb-val">${esc(profile.stamina||'—')}</span></div>
         <div class="vsb-row"><span class="vsb-label">Range</span><span class="vsb-val">${esc(profile.range||'—')}</span></div>
         <div class="vsb-row"><span class="vsb-label">Intelligence</span><span class="vsb-val">${esc(profile.intelligence||'—')}</span></div>
-        <div class="vsb-row"><span class="vsb-label">Powers & Abilities</span><span class="vsb-val" style="color:var(--accent)">${Array.isArray(profile.powers_and_abilities)?profile.powers_and_abilities.map(p=>`<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 0;">${esc(p)} <a href="https://vsbattles.fandom.com/wiki/${encodeURIComponent(p.trim().replace(/\s+/g,'_'))}" target="_blank" rel="noopener" style="font-size:10px;color:var(--cyan);text-decoration:none;border:1px solid rgba(74,184,212,.3);border-radius:3px;padding:1px 5px;">⚔ wiki</a></span>`).join('<br>'):esc(profile.powers_and_abilities||'None')}</span></div>
+        <div class="vsb-row"><span class="vsb-label">Powers & Abilities</span><span class="vsb-val" style="color:var(--accent)">${abilities.length?abilities.map(p=>`<span style="display:inline-flex;align-items:center;gap:4px;margin:2px 0;">${esc(p.name||'')}${vsbWikiTag(p.wiki_url)}</span>`).join('<br>'):'None documented on VS Battles Wiki'}</span></div>
         <div class="vsb-row"><span class="vsb-label">Weaknesses</span><span class="vsb-val" style="color:var(--red)">${Array.isArray(profile.weaknesses)?profile.weaknesses.map(esc).join(', '):esc(profile.weaknesses||'None known')}</span></div>`;
     }catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
 
