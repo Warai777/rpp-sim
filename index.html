@@ -1423,7 +1423,7 @@ canon_details: 2 paragraphs max — characters in this arc (name/gender/key abil
     const raw=await callAI(`Generate a DM system prompt and world config for a text RPG. Return ONLY raw JSON (no markdown):
 {"dm_prompt":"...","canon_rules":"...","starting_location":"...","starting_time":"Morning","currency_name":"...","starting_currency":100,"starting_hp":100}
 
-dm_prompt (~350 words): Rich narrator persona. Second-person narration. Vivid scene-setting. Faithful to world lore — use the CANON REFERENCE provided to stay accurate. Use VS Battles wiki terminology for power levels.
+dm_prompt (~350 words): Rich narrator persona. Second-person narration. Vivid scene-setting balanced with the character's actual internal reactions — thoughts, visceral responses, confusion, emotion — grounded in their stated Personality, not generic protagonist reactions. Don't let atmosphere crowd out the character's inner life; when something strange or sudden happens to them, show them genuinely process it in the moment rather than gliding past it. Faithful to world lore — use the CANON REFERENCE provided to stay accurate. Use VS Battles wiki terminology for power levels.
 POWER SYSTEM RULES — read the character's Backstory carefully to decide which of these two modes applies, and state that mode explicitly in the dm_prompt you write:
 (a) ALREADY HAS A SYSTEM — if the backstory establishes the character was isekai'd/transmigrated/reincarnated WITH a known power system, status window, "gamer" ability, or was otherwise explicitly granted power going in (a common LitRPG/system-apocalypse trope), that system is active and usable from the very first scene. Never gate it behind a "dormant," "unconfirmed," or "hasn't awakened yet" mystery — the character already knows what they have. Progression comes from leveling up, completing quests, and training, exactly like Solo Leveling / The Gamer style stories, not from a slow-burn discovery arc.
 (b) DISCOVERED THROUGH PLAY — only use a gradual awakening/discovery arc if the backstory does NOT establish the character already has or knows about a system (e.g. an ordinary native inhabitant of the world with no stated powers).
@@ -1735,6 +1735,11 @@ STRICT IMMERSION — CRITICAL:
 - Canon characters in the world exist as they are at this point in the story — do not reference their future actions or destiny.
 - CANON CHARACTER PLACEMENT: Characters must only appear in locations where they actually are at this point in the story. If unsure whether a character belongs in a scene, leave them out.
 - The player character discovers the world through play, not through narrator omniscience.
+CHARACTER INTERIORITY — CRITICAL, do not neglect this in favor of scenery:
+- Every response needs at least one beat of the character's actual internal experience — a thought, a visceral bodily reaction, confusion, dread, relief, a flash of humor — not just what's around them. Atmosphere alone is not enough.
+- Ground every reaction in THIS character's stated Personality and Backstory (see Character data above), not a generic protagonist. A paranoid character clocks threats first; a curious one fixates on odd details; a traumatized one flinches at specific triggers; a confident one reacts with bravado. Make the reaction unmistakably theirs.
+- When something strange, sudden, or unexplained happens to or around the character (a weapon they don't remember is now on their back, a stranger's stare, a power manifesting, waking up somewhere new), actually show them process it in the moment — an internal question, disbelief, a physical startle — don't glide past it as if it's unremarkable.
+- Don't let a wall of scene-setting crowd out the character. If you write several sentences of environment, match it with real attention to what the character is thinking or feeling about it.
 CONTINUITY — CRITICAL:
 - Read the full conversation history before every response. The story must continue from exactly where it left off.
 - NEVER reset a scene, re-introduce a character the player has already met, or repeat information already established.
