@@ -405,6 +405,7 @@
 
     <div class="sb-btns">
       <button class="btn btn-sm" onclick="openMod('vsb')">📊 Full Stats</button>
+      <button class="btn btn-sm" id="sb-system-btn" style="display:none;" onclick="openMod('system')">📟 System</button>
       <button class="btn btn-sm" onclick="openShop()">🛒 Universal Shop</button>
       <button class="btn btn-sm" onclick="openMod('inv')">🎒 Inventory</button>
       <button class="btn btn-sm" onclick="openMod('allies')">👥 Allies</button>
@@ -1072,6 +1073,11 @@ function stripStatTags(text){
     .replace(/\[INJURY:\s*[^\]]+\]/gi,'')
     .replace(/\[DOT:\s*[^\]]+\]/gi,'')
     .replace(/\[HEAL:\s*[^\]]+\]/gi,'')
+    .replace(/\[XP:\s*[^\]]+\]/gi,'')
+    .replace(/\[QUEST_NEW:\s*[^\]]+\]/gi,'')
+    .replace(/\[QUEST_PROGRESS:\s*[^\]]+\]/gi,'')
+    .replace(/\[QUEST_COMPLETE:\s*[^\]]+\]/gi,'')
+    .replace(/\[QUEST_FAIL:\s*[^\]]+\]/gi,'')
     .replace(/\n{3,}/g,'\n\n')
     .trim();
 }
@@ -1417,7 +1423,11 @@ canon_details: 2 paragraphs max — characters in this arc (name/gender/key abil
     const raw=await callAI(`Generate a DM system prompt and world config for a text RPG. Return ONLY raw JSON (no markdown):
 {"dm_prompt":"...","canon_rules":"...","starting_location":"...","starting_time":"Morning","currency_name":"...","starting_currency":100,"starting_hp":100}
 
-dm_prompt (~350 words): Rich narrator persona. Second-person narration. Vivid scene-setting. Faithful to world lore — use the CANON REFERENCE provided to stay accurate. Use VS Battles wiki terminology for power levels. Power systems ONLY discovered through play. Universal Shop exists outside reality — rare access moments only. Stat tags when values change: [HP: X] [BERRY: X] [DAY: N] [LOCATION: name] [TIME: name] [STAGE: text] [POWER_SYSTEM: name] [POWER_LEVEL: level] [TIER: text] [ATK: text] [SPD: text] [DUR: text] [INT: text]. Track consequences. Maintain world tone.
+dm_prompt (~350 words): Rich narrator persona. Second-person narration. Vivid scene-setting. Faithful to world lore — use the CANON REFERENCE provided to stay accurate. Use VS Battles wiki terminology for power levels.
+POWER SYSTEM RULES — read the character's Backstory carefully to decide which of these two modes applies, and state that mode explicitly in the dm_prompt you write:
+(a) ALREADY HAS A SYSTEM — if the backstory establishes the character was isekai'd/transmigrated/reincarnated WITH a known power system, status window, "gamer" ability, or was otherwise explicitly granted power going in (a common LitRPG/system-apocalypse trope), that system is active and usable from the very first scene. Never gate it behind a "dormant," "unconfirmed," or "hasn't awakened yet" mystery — the character already knows what they have. Progression comes from leveling up, completing quests, and training, exactly like Solo Leveling / The Gamer style stories, not from a slow-burn discovery arc.
+(b) DISCOVERED THROUGH PLAY — only use a gradual awakening/discovery arc if the backstory does NOT establish the character already has or knows about a system (e.g. an ordinary native inhabitant of the world with no stated powers).
+Universal Shop exists outside reality — rare access moments only. Stat tags when values change: [HP: X] [BERRY: X] [DAY: N] [LOCATION: name] [TIME: name] [STAGE: text] [POWER_SYSTEM: name] [POWER_LEVEL: level] [TIER: text] [ATK: text] [SPD: text] [DUR: text] [INT: text]. Track consequences. Maintain world tone.
 CRITICAL: NEVER write choice menus, option lists, [A]/[B]/[C] choices, "Your options are:", or any kind of numbered/lettered action list. NEVER reference future plot events. NEVER get character facts wrong. NEVER invent abilities or characters that don't exist in canon.
 canon_rules: 3-5 core world physics/rules drawn from the canon reference.
 starting_location: Single evocative canon location fitting this world and character backstory.
@@ -1425,7 +1435,7 @@ starting_time: One of Dawn/Morning/Afternoon/Evening/Night.
 currency_name: The actual in-world currency (e.g. Berries, Ryo, Zeni).
 starting_currency: INTEGER based on character backstory. homeless=0, poor=10-50, commoner=100-500, skilled=2000-10000, wealthy=10000+.
 starting_hp: INTEGER based on physical description. Average=100, athletic=120-150, sickly=50-80, exceptional=150-200.`,
-      [{role:'user',content:`World: ${selWorld.name}\nGenre: ${selWorld.genre}\nCANON REFERENCE: ${arcCtx||selWorld.lore||'Use best available knowledge'}\nCharacter: ${name}\nAppearance: ${app||'Not described'}\nBackstory: ${back||'Unknown past'}\nPersonality: ${pers||'Not described'}\nDeath Mode: ${deathMode==='permadeath'?'PERMADEATH — if HP reaches 0 the character dies permanently and the world ends. Make death real and consequential. Near-death should feel genuinely dangerous.':'EASY MODE — if HP reaches 0 the character is incapacitated and wakes up later with consequences but survives. Death is a setback not an ending.'}\nCreative Freedom: The player has FULL creative freedom to do anything they choose. Never refuse a player action or tell them they cannot do something. If they attempt something wild, use the dice roll outcome to determine how it goes — success, failure, or consequence — but always engage with what they are trying to do.`}], 1200);
+      [{role:'user',content:`World: ${selWorld.name}\nGenre: ${selWorld.genre}\nCANON REFERENCE: ${arcCtx||selWorld.lore||'Use best available knowledge'}\nCharacter: ${name}\nAppearance: ${app||'Not described'}\nBackstory: ${back||'Unknown past'}\nPersonality: ${pers||'Not described'}\nDeath Mode: ${deathMode==='permadeath'?'PERMADEATH — if HP reaches 0 the character dies permanently and the world ends. Make death real and consequential. Near-death should feel genuinely dangerous.':'EASY MODE — if HP reaches 0 the character is incapacitated and wakes up later with consequences but survives. Death is a setback not an ending.'}\nCreative Freedom: The player has FULL creative freedom to do anything they choose. Never refuse a player action or tell them they cannot do something. If they attempt something wild, use the dice roll outcome to determine how it goes — success, failure, or consequence — but always engage with what they are trying to do.\nIMPORTANT — re-read the Backstory above: if it says the character transmigrated/reincarnated/was isekai'd WITH a system, status window, or granted power (rather than being a native of this world with no powers), that system must be written as already active and usable starting turn one — no dormant/awakening gate. Progression happens through leveling and quests from the start.`}], 1200);
 
     const gen=JSON.parse(raw.replace(/```json|```/g,'').trim());
     const dmPr=gen.dm_prompt||`You are the DM of ${selWorld.name}. Narrate in second person. Character: ${name}. Embed stat changes using provided tags.`;
@@ -1522,6 +1532,8 @@ function updateSB(){
   if(p){$('s-psys').textContent=p.system_name||'—';$('s-plvl').textContent=p.current_level||'—';}
   $('s-tier').textContent=curVSB.tier||'—';$('s-atk').textContent=curVSB.attack_potency||'—';
   $('s-spd').textContent=curVSB.speed||'—';$('s-dur').textContent=curVSB.durability||'—';$('s-int').textContent=curVSB.intelligence||'—';
+  const _sysBtn=$('sb-system-btn');
+  if(_sysBtn)_sysBtn.style.display=getSystemData()?'block':'none';
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1691,6 +1703,12 @@ function buildCtx(gs,ps,orders,inv,al,canon){
   if(gs)p.push(`HP:${gs.hp}/${getMaxHP()} (${Math.max(0,Math.round(gs.hp/getMaxHP()*100))}%) | Currency:${gs.berry} | Day:${gs.current_day} | Location:${gs.current_location} | Time:${gs.current_time_of_day} | Power Stage:${gs.power_stage}`);
   const _activeEffects=getEffects();
   if(_activeEffects.length)p.push(`Active Conditions: ${_activeEffects.map(e=>e.dot?`${e.n} (draining ${e.dot}%/action)`:e.n).join(', ')}`);
+  const _sys=getSystemData();
+  if(_sys){
+    const _activeQuests=_sys.quests.filter(q=>q.status==='active');
+    p.push(`System Status — Level:${_sys.level} | XP:${_sys.xp}/${xpForLevel(_sys.level)} | Unspent stat points:${_sys.statPts} | Stats: STR ${_sys.stats.str}, AGI ${_sys.stats.agi}, PER ${_sys.stats.per}, VIT ${_sys.stats.vit}, INT ${_sys.stats.int}`);
+    if(_activeQuests.length)p.push(`Active Quests: ${_activeQuests.map(q=>`"${q.title}" — ${q.desc}`).join(' | ')}`);
+  }
   if(curVSB.tier!=='—')p.push(`VS Battles — Tier:${curVSB.tier} | ATK:${curVSB.attack_potency} | SPD:${curVSB.speed} | DUR:${curVSB.durability} | INT:${curVSB.intelligence}`);
   if(ps)p.push(`Power System:${ps.system_name} | Level:${ps.current_level} | Abilities:${ps.special_abilities}`);
   if(ps?.notes)p.push(`Character:${ps.notes}`);
@@ -1726,11 +1744,19 @@ MEMORY TAGS: [REMEMBER: fact] — permanently saves something you must keep resp
 (a) Important continuity facts — secrets learned, promises made, deals struck, items given away, injuries sustained.
 (b) Any explicit preference or instruction the player states about how they want the story run (e.g. "always describe combat in graphic detail", "never let NPCs recognize my disguise", "fade to black on romance scenes"). Capture these the moment they're stated, don't wait to be told twice.
 Skip trivial one-off details that don't need to persist.
+POWER SYSTEM ACTIVATION — this overrides any earlier framing of the power system as dormant, unconfirmed, or unawakened: re-check the Backstory in the Character data above. If it establishes the character transmigrated, reincarnated, or was isekai'd WITH a known system, status window, or granted power (as opposed to being a native of this world with no stated powers), that system is already active and usable RIGHT NOW — never gate it behind an "awakening" or "hasn't unlocked it yet" arc. If the Power System shown below currently reads as dormant/unconfirmed/inactive but the backstory says otherwise, correct this immediately: narrate the system as awake and usable this turn, and include [POWER_SYSTEM: name] [POWER_LEVEL: a real starting level, e.g. "Level 1"] [STAGE: text describing it as active] to reflect that. For this kind of character, use the SYSTEM TAGS below (XP/quests/leveling) as the actual progression mechanic — not vague narrative growth.
 CONDITION TAGS — for wounds and ailments, shown on the player's sidebar until healed:
 [INJURY: name] — a specific lasting wound (e.g. "Broken Rib", "Sprained Ankle") from something that just happened. Pair it with an [HP: X] tag reflecting the immediate damage. No further automatic HP loss — it just stays visible until treated.
 [DOT: name|percent] — an ongoing affliction (poison, bleeding, burning) that should keep draining HP on its own. percent = whole number 1-5 = % of max HP lost automatically after every subsequent player action until healed.
 [HEAL: name] — removes a previously applied [INJURY:] or [DOT:] condition the moment it's narrated as treated, cured, or healed. Must exactly match the name used when it was applied.
-Only use these when a wound or ailment is genuinely established in the narration — don't invent conditions casually.`);
+Only use these when a wound or ailment is genuinely established in the narration — don't invent conditions casually.
+SYSTEM TAGS — ONLY for characters whose backstory establishes they have a literal game-like status window/system (Solo Leveling / The Gamer style). Never use these for ordinary characters with no such system — most worlds should not use these at all.
+[XP: +amount] — award experience for a genuine accomplishment (defeating an enemy, completing training, finishing a quest's objective). Leveling and stat points are computed automatically, you never need to track or state the character's level yourself.
+[QUEST_NEW: Title|One-sentence objective|XP reward|Stat point reward] — the system issues a new quest. Use sparingly, only when it makes narrative sense for the system to assign one. No "|" characters inside the title or objective text.
+[QUEST_PROGRESS: Title|updated status text] — update an active quest's objective text to reflect partial progress. Must match an existing quest's exact title.
+[QUEST_COMPLETE: Title] — the quest's stated objective has genuinely been met this turn. Must match an existing quest's exact title.
+[QUEST_FAIL: Title] — the quest can no longer be completed (e.g. time ran out, target escaped). Must match an existing quest's exact title.
+Player-facing System UI already shows level/XP/stats/quests, so don't restate exact numbers in prose — just narrate the system's presence/notifications naturally (e.g. "the System chimes: [New Quest]").`);
   return p.join('\n');
 }
 
@@ -1743,20 +1769,54 @@ function getMaxHP(){
   return curGS?.hp||100;
 }
 
-const _effectsRx=()=>/EFFECTS:(\[[\s\S]*\])\s*$/;
+// Robust extraction/replacement of a JSON blob stored as "KEY:{...}" or "KEY:[...]"
+// inside the pipe-delimited power_system.notes string. Brace/bracket-depth-counted
+// rather than regex-bounded, so it works regardless of field order or nesting —
+// unlike a naive end-anchored regex, which breaks once more than one JSON field
+// is appended after it (e.g. EFFECTS followed by SYS).
+function extractNotesField(notes, key){
+  const marker=key+':';
+  const idx=(notes||'').indexOf(marker);
+  if(idx===-1) return null;
+  const start=idx+marker.length;
+  const openChar=notes[start];
+  const closeChar=openChar==='{'?'}':openChar==='['?']':null;
+  if(!closeChar) return null;
+  let depth=0;
+  for(let i=start;i<notes.length;i++){
+    if(notes[i]===openChar)depth++;
+    else if(notes[i]===closeChar){depth--;if(depth===0)return notes.slice(start,i+1);}
+  }
+  return null;
+}
+
+function writeNotesField(notes, key, jsonStr){
+  notes=notes||'';
+  const marker=key+':';
+  const idx=notes.indexOf(marker);
+  if(idx===-1) return notes+(notes?'|':'')+marker+jsonStr;
+  const start=idx+marker.length;
+  const openChar=notes[start];
+  const closeChar=openChar==='{'?'}':openChar==='['?']':null;
+  if(!closeChar) return notes+(notes?'|':'')+marker+jsonStr;
+  let depth=0,end=-1;
+  for(let i=start;i<notes.length;i++){
+    if(notes[i]===openChar)depth++;
+    else if(notes[i]===closeChar){depth--;if(depth===0){end=i;break;}}
+  }
+  if(end===-1) return notes+(notes?'|':'')+marker+jsonStr;
+  return notes.slice(0,start)+jsonStr+notes.slice(end+1);
+}
 
 function getEffects(){
-  const m=curPS?.notes?.match(_effectsRx());
-  if(!m) return [];
-  try{const arr=JSON.parse(m[1]);return Array.isArray(arr)?arr:[];}catch(e){return [];}
+  const raw=extractNotesField(curPS?.notes,'EFFECTS');
+  if(!raw) return [];
+  try{const arr=JSON.parse(raw);return Array.isArray(arr)?arr:[];}catch(e){return [];}
 }
 
 async function setEffects(effects){
   if(!curPS) return;
-  let notes=curPS.notes||'';
-  const json=JSON.stringify(effects);
-  const rx=_effectsRx();
-  notes=rx.test(notes)?notes.replace(rx,'EFFECTS:'+json):notes+(notes?'|':'')+'EFFECTS:'+json;
+  const notes=writeNotesField(curPS.notes,'EFFECTS',JSON.stringify(effects));
   curPS.notes=notes;
   try{await sbPa('power_system',`world_id=eq.${curWorldId}`,{notes});}catch(e){}
 }
@@ -1778,6 +1838,64 @@ async function tickConditions(){
     if(deathMode==='permadeath') setTimeout(()=>handlePermadeath(),2000);
     else setTimeout(()=>handleEasyDeath(),1500);
   }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  SYSTEM (level / stats / quests) — Solo Leveling-style status window,
+//  only active once the story actually grants XP/quests to this character.
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const DEFAULT_STATS={str:0,agi:0,per:0,vit:0,int:0};
+
+function xpForLevel(lvl){ return lvl*100; } // xp needed to advance FROM this level
+
+function getSystemData(){
+  const raw=extractNotesField(curPS?.notes,'SYS');
+  if(!raw) return null; // no system granted yet for this character
+  try{
+    const d=JSON.parse(raw);
+    return {
+      level:d.lvl||1,
+      xp:d.xp||0,
+      statPts:d.pts||0,
+      stats:Object.assign({...DEFAULT_STATS},d.stats||{}),
+      quests:Array.isArray(d.quests)?d.quests:[]
+    };
+  }catch(e){return null;}
+}
+
+async function setSystemData(data){
+  if(!curPS) return;
+  const json=JSON.stringify({lvl:data.level,xp:data.xp,pts:data.statPts,stats:data.stats,quests:data.quests});
+  const notes=writeNotesField(curPS.notes,'SYS',json);
+  curPS.notes=notes;
+  try{await sbPa('power_system',`world_id=eq.${curWorldId}`,{notes});}catch(e){}
+}
+
+function ensureSystemData(){
+  return getSystemData()||{level:1,xp:0,statPts:0,stats:{...DEFAULT_STATS},quests:[]};
+}
+
+// Mutates `data` in place, applying an XP delta and rolling any level-ups
+// (+3 stat points each) it triggers. Returns true if at least one level-up occurred.
+function applyXP(data, amount){
+  data.xp+=amount;
+  let leveledUp=false;
+  while(data.xp>=xpForLevel(data.level)){
+    data.xp-=xpForLevel(data.level);
+    data.level++;
+    data.statPts+=3;
+    leveledUp=true;
+  }
+  return leveledUp;
+}
+
+async function allocateStat(stat){
+  const data=ensureSystemData();
+  if(data.statPts<=0) return;
+  data.statPts--;
+  data.stats[stat]=(data.stats[stat]||0)+1;
+  await setSystemData(data);
+  openMod('system');
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1833,6 +1951,50 @@ async function parseStats(text){
       effects=effects.filter(e=>e.n.toLowerCase()!==nm);
     }
     await setEffects(effects);
+    updateSB();
+  }
+
+  const xpMatch=text.match(/\[XP:\s*\+?(-?\d+)\]/i);
+  const questNewMatches=[...text.matchAll(/\[QUEST_NEW:\s*([^\|\]]+)\|([^\|\]]+)\|(\d+)\|(\d+)\]/gi)];
+  const questProgressMatches=[...text.matchAll(/\[QUEST_PROGRESS:\s*([^\|\]]+)\|([^\]]+)\]/gi)];
+  const questCompleteMatches=[...text.matchAll(/\[QUEST_COMPLETE:\s*([^\]]+)\]/gi)];
+  const questFailMatches=[...text.matchAll(/\[QUEST_FAIL:\s*([^\]]+)\]/gi)];
+
+  if(xpMatch||questNewMatches.length||questProgressMatches.length||questCompleteMatches.length||questFailMatches.length){
+    const data=ensureSystemData();
+    let leveledUp=false;
+
+    questNewMatches.forEach(qm=>{
+      const title=qm[1].replace(/\|/g,'').trim();
+      if(!title||data.quests.some(q=>q.title.toLowerCase()===title.toLowerCase())) return;
+      data.quests.push({title,desc:qm[2].replace(/\|/g,'').trim(),status:'active',xp:parseInt(qm[3])||0,pts:parseInt(qm[4])||0});
+    });
+
+    questProgressMatches.forEach(qm=>{
+      const title=qm[1].replace(/\|/g,'').trim().toLowerCase();
+      const q=data.quests.find(x=>x.title.toLowerCase()===title);
+      if(q) q.desc=qm[2].replace(/\|/g,'').trim();
+    });
+
+    questCompleteMatches.forEach(qm=>{
+      const title=qm[1].replace(/\|/g,'').trim().toLowerCase();
+      const q=data.quests.find(x=>x.title.toLowerCase()===title&&x.status==='active');
+      if(!q) return;
+      q.status='completed';
+      if(q.xp&&applyXP(data,q.xp)) leveledUp=true;
+      if(q.pts) data.statPts+=q.pts;
+    });
+
+    questFailMatches.forEach(qm=>{
+      const title=qm[1].replace(/\|/g,'').trim().toLowerCase();
+      const q=data.quests.find(x=>x.title.toLowerCase()===title&&x.status==='active');
+      if(q) q.status='failed';
+    });
+
+    if(xpMatch&&applyXP(data,parseInt(xpMatch[1])||0)) leveledUp=true;
+
+    await setSystemData(data);
+    if(leveledUp) toast(`⬆ Level Up! Now Level ${data.level} — +3 stat points`,'ok');
     updateSB();
   }
 }
@@ -2296,6 +2458,50 @@ async function openMod(type){
         curVSBFull=profile;curVSBWorldId=curWorldId;
         renderVSBProfile(profile);
       }catch(e){body.innerHTML=`<div style="color:var(--red)">${esc(e.message)}</div>`;}
+    }
+
+  } else if(type==='system'){
+    title.textContent='📟 System';
+    const data=getSystemData();
+    if(!data){
+      body.innerHTML='<div style="color:var(--text3);text-align:center;padding:20px">No active system.</div>';
+    }else{
+      const pct=Math.max(0,Math.min(100,Math.round(data.xp/xpForLevel(data.level)*100)));
+      const statLabels={str:'STR',agi:'AGI',per:'PER',vit:'VIT',int:'INT'};
+      const statRows=Object.entries(data.stats).map(([k,v])=>`
+        <div class="srow" style="padding:6px 0;">
+          <span class="slb">${statLabels[k]||k.toUpperCase()}</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <span class="svl">${v}</span>
+            ${data.statPts>0?`<button class="btn btn-sm" style="padding:2px 8px;font-size:11px;" onclick="allocateStat('${k}')">+</button>`:''}
+          </span>
+        </div>`).join('');
+      const activeQuests=data.quests.filter(q=>q.status==='active');
+      const doneQuests=data.quests.filter(q=>q.status!=='active');
+      const questHTML=activeQuests.length?activeQuests.map(q=>`
+        <div style="padding:11px 0;border-bottom:1px solid var(--border);">
+          <div style="font-size:13px;font-weight:600;">${esc(q.title)}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:3px;">${esc(q.desc)}</div>
+          <div style="font-size:11px;color:var(--accent);margin-top:4px;">${q.xp?`+${q.xp} XP`:''}${q.xp&&q.pts?' · ':''}${q.pts?`+${q.pts} stat pts`:''}</div>
+        </div>`).join(''):'<div style="color:var(--text3);font-size:13px;padding:10px 0;">No active quests</div>';
+      const doneHTML=doneQuests.map(q=>`
+        <div style="padding:7px 0;font-size:12px;color:var(--text3);">
+          ${q.status==='completed'?'✓':'✕'} ${esc(q.title)}
+        </div>`).join('');
+      body.innerHTML=`
+        <div style="text-align:center;margin-bottom:16px;">
+          <div style="font-size:22px;font-weight:700;color:var(--accent);">Level ${data.level}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">${data.xp} / ${xpForLevel(data.level)} XP</div>
+          <div style="background:var(--bg2);border-radius:6px;height:8px;margin-top:8px;overflow:hidden;">
+            <div style="background:var(--accent);height:100%;width:${pct}%;"></div>
+          </div>
+          ${data.statPts>0?`<div style="font-size:11px;color:var(--green);margin-top:8px;">${data.statPts} unspent stat point${data.statPts>1?'s':''}</div>`:''}
+        </div>
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px;">Stats</div>
+        ${statRows}
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin:18px 0 8px;border-bottom:1px solid var(--border);padding-bottom:6px;">Quests</div>
+        ${questHTML}
+        ${doneHTML?`<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 6px;">History</div>${doneHTML}`:''}`;
     }
 
   } else if(type==='inv'){
