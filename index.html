@@ -1078,6 +1078,7 @@ function stripStatTags(text){
     .replace(/\[QUEST_PROGRESS:\s*[^\]]+\]/gi,'')
     .replace(/\[QUEST_COMPLETE:\s*[^\]]+\]/gi,'')
     .replace(/\[QUEST_FAIL:\s*[^\]]+\]/gi,'')
+    .replace(/\[SYS_INIT\]/gi,'')
     .replace(/\n{3,}/g,'\n\n')
     .trim();
 }
@@ -1708,6 +1709,8 @@ function buildCtx(gs,ps,orders,inv,al,canon){
     const _activeQuests=_sys.quests.filter(q=>q.status==='active');
     p.push(`System Status — Level:${_sys.level} | XP:${_sys.xp}/${xpForLevel(_sys.level)} | Unspent stat points:${_sys.statPts} | Stats: STR ${_sys.stats.str}, AGI ${_sys.stats.agi}, PER ${_sys.stats.per}, VIT ${_sys.stats.vit}, INT ${_sys.stats.int}`);
     if(_activeQuests.length)p.push(`Active Quests: ${_activeQuests.map(q=>`"${q.title}" — ${q.desc}`).join(' | ')}`);
+  }else if(ps?.system_name&&!/^unknown$/i.test(ps.system_name.trim())){
+    p.push(`SYSTEM NOT YET INITIALIZED — this character has an active named power system ("${ps.system_name}") per the Power System data below, but the mechanical status window has not been created yet. Include [SYS_INIT] in this response to initialize it now (Level 1, 0 XP) so the player's System UI activates.`);
   }
   if(curVSB.tier!=='—')p.push(`VS Battles — Tier:${curVSB.tier} | ATK:${curVSB.attack_potency} | SPD:${curVSB.speed} | DUR:${curVSB.durability} | INT:${curVSB.intelligence}`);
   if(ps)p.push(`Power System:${ps.system_name} | Level:${ps.current_level} | Abilities:${ps.special_abilities}`);
@@ -1749,13 +1752,14 @@ MEMORY TAGS: [REMEMBER: fact] — permanently saves something you must keep resp
 (a) Important continuity facts — secrets learned, promises made, deals struck, items given away, injuries sustained.
 (b) Any explicit preference or instruction the player states about how they want the story run (e.g. "always describe combat in graphic detail", "never let NPCs recognize my disguise", "fade to black on romance scenes"). Capture these the moment they're stated, don't wait to be told twice.
 Skip trivial one-off details that don't need to persist.
-POWER SYSTEM ACTIVATION — this overrides any earlier framing of the power system as dormant, unconfirmed, or unawakened: re-check the Backstory in the Character data above. If it establishes the character transmigrated, reincarnated, or was isekai'd WITH a known system, status window, or granted power (as opposed to being a native of this world with no stated powers), that system is already active and usable RIGHT NOW — never gate it behind an "awakening" or "hasn't unlocked it yet" arc. If the Power System shown below currently reads as dormant/unconfirmed/inactive but the backstory says otherwise, correct this immediately: narrate the system as awake and usable this turn, and include [POWER_SYSTEM: name] [POWER_LEVEL: a real starting level, e.g. "Level 1"] [STAGE: text describing it as active] to reflect that. For this kind of character, use the SYSTEM TAGS below (XP/quests/leveling) as the actual progression mechanic — not vague narrative growth.
+POWER SYSTEM ACTIVATION — this overrides any earlier framing of the power system as dormant, unconfirmed, or unawakened: re-check the Backstory in the Character data above. If it establishes the character transmigrated, reincarnated, or was isekai'd WITH a known system, status window, or granted power (as opposed to being a native of this world with no stated powers), that system is already active and usable RIGHT NOW — never gate it behind an "awakening" or "hasn't unlocked it yet" arc. If the Power System shown below currently reads as dormant/unconfirmed/inactive but the backstory says otherwise, correct this immediately: narrate the system as awake and usable this turn, and include [POWER_SYSTEM: name] [POWER_LEVEL: a real starting level, e.g. "Level 1"] [STAGE: text describing it as active] AND [SYS_INIT] (see SYSTEM TAGS below) in the very same response to actually create the status window — not just describe it in prose. For this kind of character, use the SYSTEM TAGS below (XP/quests/leveling) as the actual progression mechanic — not vague narrative growth.
 CONDITION TAGS — for wounds and ailments, shown on the player's sidebar until healed:
 [INJURY: name] — a specific lasting wound (e.g. "Broken Rib", "Sprained Ankle") from something that just happened. Pair it with an [HP: X] tag reflecting the immediate damage. No further automatic HP loss — it just stays visible until treated.
 [DOT: name|percent] — an ongoing affliction (poison, bleeding, burning) that should keep draining HP on its own. percent = whole number 1-5 = % of max HP lost automatically after every subsequent player action until healed.
 [HEAL: name] — removes a previously applied [INJURY:] or [DOT:] condition the moment it's narrated as treated, cured, or healed. Must exactly match the name used when it was applied.
 Only use these when a wound or ailment is genuinely established in the narration — don't invent conditions casually.
 SYSTEM TAGS — ONLY for characters whose backstory establishes they have a literal game-like status window/system (Solo Leveling / The Gamer style). Never use these for ordinary characters with no such system — most worlds should not use these at all.
+[SYS_INIT] — include this the moment the system first becomes known/active for this character (e.g. their very first scene, if their backstory already grants one). This creates the actual status window (Level 1, 0 XP) so the player's in-app System panel appears. Without this tag the panel never shows up, even if you narrate "Level 1" in prose — narration alone does not create it.
 [XP: +amount] — award experience for a genuine accomplishment (defeating an enemy, completing training, finishing a quest's objective). Leveling and stat points are computed automatically, you never need to track or state the character's level yourself.
 [QUEST_NEW: Title|One-sentence objective|XP reward|Stat point reward] — the system issues a new quest. Use sparingly, only when it makes narrative sense for the system to assign one. No "|" characters inside the title or objective text.
 [QUEST_PROGRESS: Title|updated status text] — update an active quest's objective text to reflect partial progress. Must match an existing quest's exact title.
@@ -1959,13 +1963,14 @@ async function parseStats(text){
     updateSB();
   }
 
+  const sysInit=/\[SYS_INIT\]/i.test(text);
   const xpMatch=text.match(/\[XP:\s*\+?(-?\d+)\]/i);
   const questNewMatches=[...text.matchAll(/\[QUEST_NEW:\s*([^\|\]]+)\|([^\|\]]+)\|(\d+)\|(\d+)\]/gi)];
   const questProgressMatches=[...text.matchAll(/\[QUEST_PROGRESS:\s*([^\|\]]+)\|([^\]]+)\]/gi)];
   const questCompleteMatches=[...text.matchAll(/\[QUEST_COMPLETE:\s*([^\]]+)\]/gi)];
   const questFailMatches=[...text.matchAll(/\[QUEST_FAIL:\s*([^\]]+)\]/gi)];
 
-  if(xpMatch||questNewMatches.length||questProgressMatches.length||questCompleteMatches.length||questFailMatches.length){
+  if(sysInit||xpMatch||questNewMatches.length||questProgressMatches.length||questCompleteMatches.length||questFailMatches.length){
     const data=ensureSystemData();
     let leveledUp=false;
 
