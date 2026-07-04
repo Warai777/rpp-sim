@@ -124,7 +124,7 @@
 
   /* SHOP */
   .shop-search{display:flex;gap:8px;margin-bottom:16px;}
-  .shop-search input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;color:var(--text);font-family:var(--font);font-size:13px;}
+  .shop-search input{flex:1;width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;color:var(--text);font-family:var(--font);font-size:13px;}
   .shop-search input:focus{outline:none;border-color:var(--accent);}
   .shop-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:13px;margin-bottom:9px;}
   .shop-item-name{font-size:14px;font-weight:600;margin-bottom:3px;}
@@ -179,8 +179,6 @@
     .sidebar.mob{display:flex;position:fixed;inset:0 auto 0 0;width:80%;max-width:300px;z-index:80;background:#141418;}
     .preset-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
     .action-options{padding:8px 12px 4px;}
-    .shop-search{flex-wrap:wrap;}
-    .shop-search #shop-universe{flex:1 1 100%;}
   }
 </style>
 </head>
@@ -477,7 +475,6 @@
     </div>
     <div class="mb">
       <div class="shop-search" style="position:relative;">
-        <select id="shop-universe" title="Live suggestions from…" style="flex:0 0 150px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:9px;color:var(--text);font-family:var(--font);font-size:13px;" onchange="onShopUniverseChange()"></select>
         <div style="flex:1;position:relative;">
           <input type="text" id="shop-query" placeholder="Search for any item, ability, weapon, technique… or paste a Fandom link" autocomplete="off"
             onkeydown="if(event.key==='Enter'){hideShopSuggestions();searchShop();}"
@@ -1460,7 +1457,8 @@ starting_time: One of Dawn/Morning/Afternoon/Evening/Night.
 currency_name: The actual in-world currency (e.g. Berries, Ryo, Zeni).
 starting_currency: INTEGER based on character backstory. homeless=0, poor=10-50, commoner=100-500, skilled=2000-10000, wealthy=10000+.
 starting_hp: INTEGER based on physical description. Average=100, athletic=120-150, sickly=50-80, exceptional=150-200.
-art_style: A concise image-generation style descriptor matching this world's ACTUAL official visual medium — do not default to anime unless the source material genuinely is anime. If it's a well-known franchise, name the real studio/mangaka/illustrator/art direction (e.g. "Eiichiro Oda's One Piece manga/anime art style, bold expressive linework" or "Solo Leveling webtoon art style by DUBU/Redice Studio, sharp digital shading" or "photorealistic cinematic style matching the Harry Potter film franchise" or "gritty photorealistic style matching The Witcher 3 concept art"). For an original/custom world, pick a fitting illustration style based on its genre/tone instead. One sentence, no more than ~20 words.`,
+art_style: A concise image-generation style descriptor matching this world's ACTUAL official visual medium — do not default to anime unless the source material genuinely is anime. If it's a well-known franchise, name the real studio/mangaka/illustrator/art direction (e.g. "Eiichiro Oda's One Piece manga/anime art style, bold expressive linework" or "Solo Leveling webtoon art style by DUBU/Redice Studio, sharp digital shading" or "photorealistic cinematic style matching the Harry Potter film franchise" or "gritty photorealistic style matching The Witcher 3 concept art"). For an original/custom world, pick a fitting illustration style based on its genre/tone instead. One sentence, no more than ~20 words.
+usd_exchange_rate: INTEGER — how many units of this world's currency roughly equal $1 USD, so mundane shop items can be priced by estimating their real-world dollar cost and converting. Base it on the currency's actual canon usage if you know it (e.g. if a basic meal canonically costs around 100 of this currency and a basic meal is worth roughly $10-15 USD, the rate is about 7-10). For an original/custom world or unknown canon pricing, pick a sensible round number consistent with starting_currency (a "commoner" amount should feel like a modest few hundred real dollars).`,
       [{role:'user',content:`World: ${selWorld.name}\nGenre: ${selWorld.genre}\nCANON REFERENCE: ${arcCtx||selWorld.lore||'Use best available knowledge'}\nCharacter: ${name}\nAppearance: ${app||'Not described'}\nBackstory: ${back||'Unknown past'}\nPersonality: ${pers||'Not described'}\nDeath Mode: ${deathMode==='permadeath'?'PERMADEATH — if HP reaches 0 the character dies permanently and the world ends. Make death real and consequential. Near-death should feel genuinely dangerous.':'EASY MODE — if HP reaches 0 the character is incapacitated and wakes up later with consequences but survives. Death is a setback not an ending.'}\nCreative Freedom: The player has FULL creative freedom to do anything they choose. Never refuse a player action or tell them they cannot do something. If they attempt something wild, use the dice roll outcome to determine how it goes — success, failure, or consequence — but always engage with what they are trying to do.\nIMPORTANT — re-read the Backstory above: if it says the character transmigrated/reincarnated/was isekai'd WITH a system, status window, or granted power (rather than being a native of this world with no powers), that system must be written as already active and usable starting turn one — no dormant/awakening gate. Progression happens through leveling and quests from the start.`}], 1200);
 
     const gen=JSON.parse(raw.replace(/```json|```/g,'').trim());
@@ -1469,12 +1467,13 @@ art_style: A concise image-generation style descriptor matching this world's ACT
     const startingHp=parseInt(gen.starting_hp)||100;
     const fullCanon=(gen.canon_rules||'')+(arcDetails?'\n\nCANON REFERENCE:\n'+arcDetails:'');
     const artStyle=(gen.art_style||deriveArtStyle(selWorld.genre)).replace(/\|/g,'').trim();
+    const fxRate=parseInt(gen.usd_exchange_rate)||10;
 
     const [world]=await sbP('worlds',{world_name:selWorld.name,genre:selWorld.genre,dm_system_prompt:dmPr,canon_rules:fullCanon,user_id:currentUser?.id||null});
     const wid=world.id;
     await Promise.all([
       sbP('game_state',{world_id:wid,hp:startingHp,berry:startingCurrency,power_stage:'Unknown',current_day:1,current_location:gen.starting_location||selWorld.name,current_time_of_day:gen.starting_time||'Morning'}),
-      sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}|CUR:${gen.currency_name||'Gold'}|ARC:${detectedArc}|DEATH:${deathMode}|MAXHP:${startingHp}|ART:${artStyle}`})
+      sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}|CUR:${gen.currency_name||'Gold'}|ARC:${detectedArc}|DEATH:${deathMode}|MAXHP:${startingHp}|ART:${artStyle}|FXRATE:${fxRate}`})
     ]);
     toast('World created!','ok');enterWorld(wid,true);
   }catch(e){toast(e.message,'err');btn.disabled=false;btn.innerHTML='Begin Adventure ↵';}
@@ -1807,6 +1806,13 @@ function getMaxHP(){
   return curGS?.hp||100;
 }
 
+// Units of this world's currency roughly equal to $1 USD — used to price mundane
+// shop items off a real-world dollar estimate instead of an arbitrary number.
+function getExchangeRate(){
+  const m=curPS?.notes?.match(/FXRATE:(\d+)/);
+  return m?parseInt(m[1])||10:10;
+}
+
 // Robust extraction/replacement of a JSON blob stored as "KEY:{...}" or "KEY:[...]"
 // inside the pipe-delimited power_system.notes string. Brace/bracket-depth-counted
 // rather than regex-bounded, so it works regardless of field order or nesting —
@@ -2117,6 +2123,21 @@ function fandomSearchFallback(name, source){
   return `https://www.fandom.com/search?q=${encodeURIComponent((name||'')+' '+(source||''))}`;
 }
 
+// Confirms a cited Fandom wiki URL actually resolves to a real page, via
+// MediaWiki's query API (supports CORS), instead of trusting the model's claim.
+async function verifyFandomUrl(url){
+  try{
+    const m=(url||'').match(/^https?:\/\/([a-z0-9-]+)\.fandom\.com\/wiki\/([^?#]+)/i);
+    if(!m) return false;
+    const subdomain=m[1],title=decodeURIComponent(m[2]);
+    const r=await fetch(`https://${subdomain}.fandom.com/api.php?action=query&titles=${encodeURIComponent(title)}&format=json&origin=*`);
+    if(!r.ok) return false;
+    const d=await r.json();
+    const page=Object.values(d?.query?.pages||{})[0];
+    return !!page&&page.missing===undefined&&page.pageid!=null;
+  }catch(e){return false;}
+}
+
 function fandomBtn(url){
   if(!url) return '';
   return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--cyan);text-decoration:none;border:1px solid rgba(74,184,212,.3);border-radius:4px;padding:3px 8px;">📖 View on Fandom Wiki</a>`;
@@ -2165,8 +2186,7 @@ function onShopSearchInput(val){
 }
 
 async function fetchShopSuggestions(q){
-  const universe=$('shop-universe')?.value||cachedWorld?.world_name;
-  const slug=guessFandomSlug(universe);
+  const slug=guessFandomSlug(cachedWorld?.world_name);
   if(!slug) return;
   const seq=++shopSuggestSeq;
   try{
@@ -2199,23 +2219,6 @@ function pickShopSuggestion(url){
   searchShopByUrl(url);
 }
 
-function onShopUniverseChange(){
-  const q=$('shop-query').value.trim();
-  if(q&&!/^https?:\/\//i.test(q)&&q.length>=2) fetchShopSuggestions(q);
-  else hideShopSuggestions();
-}
-
-function populateShopUniverseSelect(){
-  const sel=$('shop-universe');
-  const all=getAllWorlds();
-  const curName=cachedWorld?.world_name;
-  let options=[];
-  if(curName&&!all.some(w=>w.name===curName)) options.push(`<option value="${esc(curName)}">${esc(curName)} (current)</option>`);
-  options=options.concat(all.map(w=>`<option value="${esc(w.name)}">${w.icon||''} ${esc(w.name)}${w.name===curName?' (current)':''}</option>`));
-  sel.innerHTML=options.join('');
-  if(curName) sel.value=curName;
-}
-
 async function openShop(){
   $('shop-ov').classList.add('open');
   $('shop-results').innerHTML=`
@@ -2227,7 +2230,6 @@ async function openShop(){
   shopItems=[];
   const curName=getCurrency();
   $('shop-currency').textContent=curName;
-  populateShopUniverseSelect();
 }
 function closeShop(){$('shop-ov').classList.remove('open');}
 
@@ -2252,6 +2254,7 @@ async function searchShop(){
     const gs=curGS,ps=curPS;
     const [world]=await sbG('worlds',`id=eq.${curWorldId}&select=world_name,genre`);
     const curName=getCurrency();
+    const fxRate=getExchangeRate();
     $('shop-currency').textContent=curName;
 
     const {api}=cfg();
@@ -2270,11 +2273,12 @@ PROCESS:
 2. Search that franchise's OWN dedicated Fandom wiki directly (e.g. onepiece.fandom.com, harrypotter.fandom.com, narutopedia.fandom.com, eldenring.fandom.com — NOT vsbattles.fandom.com) for the item's real page, and write that URL as FANDOM_WIKI_URL. Pull the description from that page. Most items used by characters (weapons, gadgets, artifacts, tools) only exist on their franchise's own wiki, not on VS Battles, since VS Battles only documents characters and their abilities — do not skip an item just because it lacks a VS Battles page.
 3. Separately, only if a character strongly associated with using this item has an actual profile on vsbattles.fandom.com, include that URL as VSBATTLES_URL_OR_NONE. Otherwise write NONE.
 
-PRICING — based on the item's absolute power tier:
-Street level: 100-10,000 | Enhanced human: 10,000-500,000 | Superhuman/city: 500,000-10,000,000 | Country/continent: 10,000,000-500,000,000 | Planet/star: 500,000,000-10,000,000,000 | Galaxy+: 10,000,000,000+ | Beyond God: 999,000,000,000,000+
+PRICING — two modes depending on the item's power tier:
+1. MUNDANE/STREET-LEVEL items (ordinary objects with no supernatural effect — weapons, tools, gear, potions, everyday goods): estimate what the item would reasonably cost in USD if it existed in the real world (e.g. a well-made sword ~$500-2,000, a fine cloak ~$150-400, a rare herb ~$20-100, a sturdy dagger ~$80-300), then convert to ${curName} at the given exchange rate of ${fxRate} ${curName} per $1 USD.
+2. ENHANCED-HUMAN AND ABOVE items (any real supernatural/superhuman effect): a real-world dollar estimate stops making sense here — use this tier scale instead: Enhanced human: 10,000-500,000 | Superhuman/city: 500,000-10,000,000 | Country/continent: 10,000,000-500,000,000 | Planet/star: 500,000,000-10,000,000,000 | Galaxy+: 10,000,000,000+ | Beyond God: 999,000,000,000,000+
 
 CRITICAL: Only return items that actually exist in real fiction, with a real fandom wiki URL you found via search. Never invent items or URLs. If nothing real is found output: NONE`,
-        messages:[{role:'user',content:`Look up: "${q}"\nPlayer world: ${world?.world_name}\nReturn only real canon results with actual fandom wiki URLs.`}]
+        messages:[{role:'user',content:`Look up: "${q}"\nPlayer world: ${world?.world_name}\nExchange rate: ${fxRate} ${curName} per $1 USD\nReturn only real canon results with actual fandom wiki URLs.`}]
       })
     });
 
@@ -2294,7 +2298,7 @@ CRITICAL: Only return items that actually exist in real fiction, with a real fan
     }
 
     const lines=rawText.split('\n').filter(l=>l.includes('|')&&!l.startsWith('NAME'));
-    const items=lines.slice(0,3).map(line=>{
+    const rawItems=lines.slice(0,3).map(line=>{
       const parts=line.split('|').map(p=>p.trim());
       const price=parseInt((parts[3]||'0').replace(/[^0-9]/g,''))||0;
       return {
@@ -2310,8 +2314,25 @@ CRITICAL: Only return items that actually exist in real fiction, with a real fan
       };
     }).filter(i=>i.name!=='Unknown');
 
-    if(!items.length){
+    if(!rawItems.length){
       $('shop-results').innerHTML=`<div style="color:var(--text3);text-align:center;padding:20px;">No verified canon items found. <a href="${fandomSearchFallback(q,'')}" target="_blank" style="color:var(--accent);">Browse Fandom →</a></div>`;
+      return;
+    }
+
+    // The model sometimes cites a plausible-looking item with a URL that doesn't
+    // actually resolve — verify each wiki_url really exists on that wiki before
+    // showing it, rather than trusting the AI's claim at face value.
+    const verified=await Promise.all(rawItems.map(i=>verifyFandomUrl(i.wiki_url)));
+    const items=rawItems.filter((i,idx)=>verified[idx]);
+
+    if(!items.length){
+      $('shop-results').innerHTML=`
+        <div style="padding:20px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);text-align:center;">
+          <div style="font-size:22px;margin-bottom:10px;">⚠</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px;">Couldn't Verify Any Results</div>
+          <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:12px;">The Archive found a candidate, but its cited wiki page doesn't actually exist — likely a fabrication. Try rephrasing your search, or browse the wiki directly.</div>
+          <a href="${fandomSearchFallback(q,'')}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--accent);text-decoration:none;border:1px solid var(--accentD);border-radius:6px;padding:6px 14px;">Search Fandom Directly →</a>
+        </div>`;
       return;
     }
 
@@ -2335,6 +2356,7 @@ async function searchShopByUrl(url){
     const gs=curGS,ps=curPS;
     const [world]=await sbG('worlds',`id=eq.${curWorldId}&select=world_name,genre`);
     const curName=getCurrency();
+    const fxRate=getExchangeRate();
     $('shop-currency').textContent=curName;
 
     const {api}=cfg();
@@ -2351,11 +2373,12 @@ NAME|SOURCE_SERIES|ONE_SENTENCE_DESCRIPTION|PRICE_IN_${curName}|POWER_REQUIREMEN
 FANDOM_WIKI_URL must be the exact URL the player pasted (echo it back unchanged).
 Separately, only if a character strongly associated with this item has an actual profile on vsbattles.fandom.com, include that URL as VSBATTLES_URL_OR_NONE, otherwise NONE.
 
-PRICING — based on the item's absolute power tier:
-Street level: 100-10,000 | Enhanced human: 10,000-500,000 | Superhuman/city: 500,000-10,000,000 | Country/continent: 10,000,000-500,000,000 | Planet/star: 500,000,000-10,000,000,000 | Galaxy+: 10,000,000,000+ | Beyond God: 999,000,000,000,000+
+PRICING — two modes depending on the item's power tier:
+1. MUNDANE/STREET-LEVEL items (ordinary objects with no supernatural effect — weapons, tools, gear, potions, everyday goods): estimate what the item would reasonably cost in USD if it existed in the real world (e.g. a well-made sword ~$500-2,000, a fine cloak ~$150-400, a rare herb ~$20-100, a sturdy dagger ~$80-300), then convert to ${curName} at the given exchange rate of ${fxRate} ${curName} per $1 USD.
+2. ENHANCED-HUMAN AND ABOVE items (any real supernatural/superhuman effect): a real-world dollar estimate stops making sense here — use this tier scale instead: Enhanced human: 10,000-500,000 | Superhuman/city: 500,000-10,000,000 | Country/continent: 10,000,000-500,000,000 | Planet/star: 500,000,000-10,000,000,000 | Galaxy+: 10,000,000,000+ | Beyond God: 999,000,000,000,000+
 
 CRITICAL: Base the description only on what is actually on that page. If the page can't be found or isn't a real item/ability page, output: NONE`,
-        messages:[{role:'user',content:`Page URL: ${url}\nPlayer world: ${world?.world_name}\nLook up this exact page and extract the item.`}]
+        messages:[{role:'user',content:`Page URL: ${url}\nPlayer world: ${world?.world_name}\nExchange rate: ${fxRate} ${curName} per $1 USD\nLook up this exact page and extract the item.`}]
       })
     });
 
