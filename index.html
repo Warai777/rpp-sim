@@ -144,7 +144,7 @@
   .ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:100;align-items:center;justify-content:center;padding:18px;}
   .ov.open{display:flex;}
   .modal{background:var(--card);border:1px solid var(--border2);border-radius:var(--rl);width:100%;max-width:550px;max-height:84vh;display:flex;flex-direction:column;}
-  .modal.wide{max-width:820px;}
+  .modal.wide{max-width:820px;min-height:min(560px,84vh);}
   .mh{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
   .mb{padding:14px 18px;overflow-y:auto;flex:1;}
   .mf{padding:10px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
@@ -549,7 +549,27 @@ let currentPortraitPrompt='';
 let portraitStatuses=[];
 let _portraitPreloadFired=false;
 
-async function generatePortrait(appearance, worldName, statusEffects=[]){
+// Best-effort fallback when no AI-determined art style has been stored yet —
+// picks a broad visual medium from the world's genre instead of forcing every
+// portrait into "anime style" regardless of what the source material actually is.
+function deriveArtStyle(genreText){
+  const g=(genreText||'').toLowerCase();
+  if(g.includes('cultivation')||g.includes('xianxia')) return 'Chinese xianxia/donghua animation art style, flowing robes, ethereal color palette';
+  if(g.includes('manhwa')) return 'Korean manhwa/webtoon art style, clean sharp digital linework, dramatic cel shading';
+  if(g.includes('anime')||g.includes('manga')) return 'Japanese anime/manga art style, expressive linework, cel-shaded coloring';
+  if(g.includes('comic')) return 'Western comic book art style, bold inks, dynamic shading';
+  if(g.includes('tv')||g.includes('movie')||g.includes('film')) return 'photorealistic cinematic style, matching a live-action film/TV adaptation';
+  if(g.includes('game')) return 'video game concept art / character render style';
+  if(g.includes('book')||g.includes('novel')) return 'detailed fantasy book cover illustration style';
+  return 'detailed painterly illustration style';
+}
+
+function getStoredArtStyle(){
+  const m=curPS?.notes?.match(/ART:([^|]+)/);
+  return m?m[1].trim():null;
+}
+
+async function generatePortrait(appearance, worldName, statusEffects=[], artStyleOverride=null){
   const wrap=$('char-portrait-wrap');
   const loading=$('char-portrait-loading');
   const img=$('char-portrait');
@@ -560,7 +580,8 @@ async function generatePortrait(appearance, worldName, statusEffects=[]){
 
   try{
     const statusDesc=statusEffects.length?`, ${statusEffects.join(', ')}`:'';
-    const prompt=`anime art style, detailed character portrait, ${appearance}${statusDesc}, ${worldName} universe art style, dramatic lighting, high quality, upper body shot`;
+    const artStyle=artStyleOverride||getStoredArtStyle()||deriveArtStyle(cachedWorld?.genre);
+    const prompt=`${artStyle}, detailed character portrait, ${appearance}${statusDesc}, set in the ${worldName} universe, dramatic lighting, high quality, upper body shot`;
     currentPortraitPrompt=prompt;
 
     const encoded=encodeURIComponent(prompt);
@@ -1395,7 +1416,7 @@ async function createAndBegin(){
   const btn=$('begin-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Building world…';
   // Kick off portrait generation immediately — it only needs appearance+world name,
   // both already known, so it can run fully in parallel with the world/arc generation below.
-  if(app){_portraitPreloadFired=true;generatePortrait(app, selWorld.name, []);}
+  if(app){_portraitPreloadFired=true;generatePortrait(app, selWorld.name, [], deriveArtStyle(selWorld.genre));}
   try{
     btn.innerHTML='<span class="spin"></span> Loading world lore…';
     const searchRes=await fetch('https://api.anthropic.com/v1/messages',{
@@ -1425,7 +1446,7 @@ canon_details: 2 paragraphs max — characters in this arc (name/gender/key abil
 
     btn.innerHTML='<span class="spin"></span> Building world…';
     const raw=await callAI(`Generate a DM system prompt and world config for a text RPG. Return ONLY raw JSON (no markdown):
-{"dm_prompt":"...","canon_rules":"...","starting_location":"...","starting_time":"Morning","currency_name":"...","starting_currency":100,"starting_hp":100}
+{"dm_prompt":"...","canon_rules":"...","starting_location":"...","starting_time":"Morning","currency_name":"...","starting_currency":100,"starting_hp":100,"art_style":"..."}
 
 dm_prompt (~350 words): Rich narrator persona. Second-person narration. Vivid scene-setting balanced with the character's actual internal reactions — thoughts, visceral responses, confusion, emotion — grounded in their stated Personality, not generic protagonist reactions. Don't let atmosphere crowd out the character's inner life; when something strange or sudden happens to them, show them genuinely process it in the moment rather than gliding past it. Faithful to world lore — use the CANON REFERENCE provided to stay accurate. Use VS Battles wiki terminology for power levels.
 POWER SYSTEM RULES — read the character's Backstory carefully to decide which of these two modes applies, and state that mode explicitly in the dm_prompt you write:
@@ -1438,7 +1459,8 @@ starting_location: Single evocative canon location fitting this world and charac
 starting_time: One of Dawn/Morning/Afternoon/Evening/Night.
 currency_name: The actual in-world currency (e.g. Berries, Ryo, Zeni).
 starting_currency: INTEGER based on character backstory. homeless=0, poor=10-50, commoner=100-500, skilled=2000-10000, wealthy=10000+.
-starting_hp: INTEGER based on physical description. Average=100, athletic=120-150, sickly=50-80, exceptional=150-200.`,
+starting_hp: INTEGER based on physical description. Average=100, athletic=120-150, sickly=50-80, exceptional=150-200.
+art_style: A concise image-generation style descriptor matching this world's ACTUAL official visual medium — do not default to anime unless the source material genuinely is anime. If it's a well-known franchise, name the real studio/mangaka/illustrator/art direction (e.g. "Eiichiro Oda's One Piece manga/anime art style, bold expressive linework" or "Solo Leveling webtoon art style by DUBU/Redice Studio, sharp digital shading" or "photorealistic cinematic style matching the Harry Potter film franchise" or "gritty photorealistic style matching The Witcher 3 concept art"). For an original/custom world, pick a fitting illustration style based on its genre/tone instead. One sentence, no more than ~20 words.`,
       [{role:'user',content:`World: ${selWorld.name}\nGenre: ${selWorld.genre}\nCANON REFERENCE: ${arcCtx||selWorld.lore||'Use best available knowledge'}\nCharacter: ${name}\nAppearance: ${app||'Not described'}\nBackstory: ${back||'Unknown past'}\nPersonality: ${pers||'Not described'}\nDeath Mode: ${deathMode==='permadeath'?'PERMADEATH — if HP reaches 0 the character dies permanently and the world ends. Make death real and consequential. Near-death should feel genuinely dangerous.':'EASY MODE — if HP reaches 0 the character is incapacitated and wakes up later with consequences but survives. Death is a setback not an ending.'}\nCreative Freedom: The player has FULL creative freedom to do anything they choose. Never refuse a player action or tell them they cannot do something. If they attempt something wild, use the dice roll outcome to determine how it goes — success, failure, or consequence — but always engage with what they are trying to do.\nIMPORTANT — re-read the Backstory above: if it says the character transmigrated/reincarnated/was isekai'd WITH a system, status window, or granted power (rather than being a native of this world with no powers), that system must be written as already active and usable starting turn one — no dormant/awakening gate. Progression happens through leveling and quests from the start.`}], 1200);
 
     const gen=JSON.parse(raw.replace(/```json|```/g,'').trim());
@@ -1446,12 +1468,13 @@ starting_hp: INTEGER based on physical description. Average=100, athletic=120-15
     const startingCurrency=parseInt(gen.starting_currency)||100;
     const startingHp=parseInt(gen.starting_hp)||100;
     const fullCanon=(gen.canon_rules||'')+(arcDetails?'\n\nCANON REFERENCE:\n'+arcDetails:'');
+    const artStyle=(gen.art_style||deriveArtStyle(selWorld.genre)).replace(/\|/g,'').trim();
 
     const [world]=await sbP('worlds',{world_name:selWorld.name,genre:selWorld.genre,dm_system_prompt:dmPr,canon_rules:fullCanon,user_id:currentUser?.id||null});
     const wid=world.id;
     await Promise.all([
       sbP('game_state',{world_id:wid,hp:startingHp,berry:startingCurrency,power_stage:'Unknown',current_day:1,current_location:gen.starting_location||selWorld.name,current_time_of_day:gen.starting_time||'Morning'}),
-      sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}|CUR:${gen.currency_name||'Gold'}|ARC:${detectedArc}|DEATH:${deathMode}|MAXHP:${startingHp}`})
+      sbP('power_system',{world_id:wid,system_name:'Unknown',current_level:'None',current_progress:0,special_abilities:'None',notes:`N:${name}|A:${app}|B:${back}|P:${pers}|CUR:${gen.currency_name||'Gold'}|ARC:${detectedArc}|DEATH:${deathMode}|MAXHP:${startingHp}|ART:${artStyle}`})
     ]);
     toast('World created!','ok');enterWorld(wid,true);
   }catch(e){toast(e.message,'err');btn.disabled=false;btn.innerHTML='Begin Adventure ↵';}
@@ -1480,8 +1503,11 @@ async function enterWorld(wid,opening=false){
     const pap=ps?.notes?.match(/A:([^|]+)/);
     if(pap){
       portraitStatuses=[];
-      if(_portraitPreloadFired) _portraitPreloadFired=false; // already kicked off in createAndBegin, in parallel with world generation
-      else generatePortrait(pap[1].trim(), world.world_name, []);
+      // If createAndBegin already kicked off a fast preload (using only a genre-based style
+      // guess, since the AI-determined precise art style wasn't known yet at that point),
+      // regenerate now using the accurate stored ART style instead of settling for the guess.
+      _portraitPreloadFired=false;
+      generatePortrait(pap[1].trim(), world.world_name, []);
     }
     if(opening){addSys('The world takes shape…');await genOpening(world,gs,ps);}
     // Start background music if enabled
@@ -2192,7 +2218,12 @@ function populateShopUniverseSelect(){
 
 async function openShop(){
   $('shop-ov').classList.add('open');
-  $('shop-results').innerHTML='';
+  $('shop-results').innerHTML=`
+    <div style="text-align:center;padding:60px 20px;color:var(--text3);">
+      <div style="font-size:34px;margin-bottom:14px;opacity:.5;">🛒</div>
+      <div style="font-size:14px;color:var(--text2);margin-bottom:6px;">Search for any item, ability, weapon, or technique above</div>
+      <div style="font-size:12px;">…or paste a Fandom page link directly to pull an item from that exact page</div>
+    </div>`;
   shopItems=[];
   const curName=getCurrency();
   $('shop-currency').textContent=curName;
