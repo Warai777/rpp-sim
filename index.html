@@ -144,7 +144,7 @@
   .ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:100;align-items:center;justify-content:center;padding:18px;}
   .ov.open{display:flex;}
   .modal{background:var(--card);border:1px solid var(--border2);border-radius:var(--rl);width:100%;max-width:550px;max-height:84vh;display:flex;flex-direction:column;}
-  .modal.wide{max-width:680px;}
+  .modal.wide{max-width:820px;}
   .mh{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);}
   .mb{padding:14px 18px;overflow-y:auto;flex:1;}
   .mf{padding:10px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
@@ -179,6 +179,8 @@
     .sidebar.mob{display:flex;position:fixed;inset:0 auto 0 0;width:80%;max-width:300px;z-index:80;background:#141418;}
     .preset-grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
     .action-options{padding:8px 12px 4px;}
+    .shop-search{flex-wrap:wrap;}
+    .shop-search #shop-universe{flex:1 1 100%;}
   }
 </style>
 </head>
@@ -475,6 +477,7 @@
     </div>
     <div class="mb">
       <div class="shop-search" style="position:relative;">
+        <select id="shop-universe" title="Live suggestions from…" style="flex:0 0 150px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:9px;color:var(--text);font-family:var(--font);font-size:13px;" onchange="onShopUniverseChange()"></select>
         <div style="flex:1;position:relative;">
           <input type="text" id="shop-query" placeholder="Search for any item, ability, weapon, technique… or paste a Fandom link" autocomplete="off"
             onkeydown="if(event.key==='Enter'){hideShopSuggestions();searchShop();}"
@@ -2136,7 +2139,8 @@ function onShopSearchInput(val){
 }
 
 async function fetchShopSuggestions(q){
-  const slug=guessFandomSlug(cachedWorld?.world_name);
+  const universe=$('shop-universe')?.value||cachedWorld?.world_name;
+  const slug=guessFandomSlug(universe);
   if(!slug) return;
   const seq=++shopSuggestSeq;
   try{
@@ -2169,12 +2173,30 @@ function pickShopSuggestion(url){
   searchShopByUrl(url);
 }
 
+function onShopUniverseChange(){
+  const q=$('shop-query').value.trim();
+  if(q&&!/^https?:\/\//i.test(q)&&q.length>=2) fetchShopSuggestions(q);
+  else hideShopSuggestions();
+}
+
+function populateShopUniverseSelect(){
+  const sel=$('shop-universe');
+  const all=getAllWorlds();
+  const curName=cachedWorld?.world_name;
+  let options=[];
+  if(curName&&!all.some(w=>w.name===curName)) options.push(`<option value="${esc(curName)}">${esc(curName)} (current)</option>`);
+  options=options.concat(all.map(w=>`<option value="${esc(w.name)}">${w.icon||''} ${esc(w.name)}${w.name===curName?' (current)':''}</option>`));
+  sel.innerHTML=options.join('');
+  if(curName) sel.value=curName;
+}
+
 async function openShop(){
   $('shop-ov').classList.add('open');
   $('shop-results').innerHTML='';
   shopItems=[];
   const curName=getCurrency();
   $('shop-currency').textContent=curName;
+  populateShopUniverseSelect();
 }
 function closeShop(){$('shop-ov').classList.remove('open');}
 
