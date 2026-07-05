@@ -1518,7 +1518,10 @@ async function enterWorld(wid,opening=false){
         hist.forEach(m=>m.role==='user'?addP(m.content,false):addD(m.content,false,false));
         const lastDM=[...hist].reverse().find(m=>m.role==='assistant');
         const lastPlayer=[...hist].reverse().find(m=>m.role==='user');
-        if(lastDM) genOptions(lastDM.content, world, lastPlayer?.content||'');
+        if(lastDM){
+          const resumeInv=await sbG('inventory',`world_id=eq.${wid}&select=*`).catch(()=>[]);
+          genOptions(lastDM.content, world, lastPlayer?.content||'', resumeInv);
+        }
       }
       else addSys('Your adventure continues…');
     }
@@ -1652,7 +1655,7 @@ async function sendAction(text){
     consumeItems(dm, inv);
     autoRemember(dm);
     parseStatusEffects(dm);
-    genOptions(dm, world, text);
+    genOptions(dm, world, text, inv);
   }catch(e){ty.remove();addSys('Error: '+e.message);}
   finally{busy=false;$('send-btn').disabled=false;}
 }
@@ -1695,18 +1698,20 @@ async function autoRemember(dmText){
   }));
 }
 
-async function genOptions(dmText, world, playerAction=''){
+async function genOptions(dmText, world, playerAction='', inv=[]){
   const ao=$('action-options');ao.style.display='none';
   try{
     const gs=curGS;
     const lastDialogue=dmText.match(/"([^"]{10,100})"\s*(?:he|she|they|it)?\s*(?:says?|asks?|said|asked)?[^"]*$/i)?.[1]||'';
+    const invCtx=inv?.length?inv.map(i=>i.item_name).join(', '):'empty — the character has no items on them right now';
     const raw=await callAI(
 `You generate 3 action options for a text RPG player. Return ONLY a raw JSON array of exactly 3 strings.
 CRITICAL: The options are for THE PLAYER CHARACTER — what THEY say or do next. Never write options from another character's perspective.
 If someone asked the player a question, the options are the player's possible RESPONSES to that question.
 If the player is in a conversation, options are things THE PLAYER says or does — not what the other character does.
+CRITICAL — do not invent unearned resources: only suggest producing/using a specific item, document, disguise, or prior preparation if it's listed in the character's actual Inventory below. Never write an option implying the character secretly already has something (forged papers, a hidden weapon, a fake badge) that was never established. If a clever or deceptive option is worth offering, phrase it as an in-the-moment attempt instead — e.g. "Try to bluff your way past him" or "Claim you're just passing through" — not as producing an object that doesn't exist.
 Keep each under 12 words. Vary tone — one direct, one cautious, one unexpected. No numbering. No quotation marks unless it's dialogue.`,
-      [{role:'user',content:`World: ${world.world_name}\nPlayer character just did: ${playerAction}\nScene ending (what just happened): ${dmText.slice(-400)}\nLast dialogue heard: ${lastDialogue||'none'}\nPlayer location: ${gs?.current_location||'unknown'}`}],400);
+      [{role:'user',content:`World: ${world.world_name}\nPlayer character just did: ${playerAction}\nScene ending (what just happened): ${dmText.slice(-400)}\nLast dialogue heard: ${lastDialogue||'none'}\nPlayer location: ${gs?.current_location||'unknown'}\nInventory: ${invCtx}`}],400);
     const opts=JSON.parse(raw.replace(/```json|```/g,'').trim());
     if(!Array.isArray(opts)||opts.length<1)return;
     ao.innerHTML='';
@@ -1775,6 +1780,7 @@ CONTINUITY — CRITICAL:
 - Read the full conversation history before every response. The story must continue from exactly where it left off.
 - NEVER reset a scene, re-introduce a character the player has already met, or repeat information already established.
 - Track what has happened and what has been said. Build forward, never backward.
+- NEVER retroactively invent an off-screen event, preparation, or object to justify a player's action if it was never actually played out or already in their Inventory (see Character data above). If the player's action requires something they don't have on record (e.g. "hand over forged papers" when no such papers exist), do NOT fabricate a flashback explaining when/how they supposedly got it — instead narrate the attempt honestly in the current moment: they have nothing to show, the bluff is empty-handed, or the attempt simply doesn't have the prop it would need. It is fine for this to fail or complicate the scene; that's more consistent than inventing history that never happened.
 ARC TRANSITIONS: When the story moves into a new arc, include [NEW_ARC: arc name]. Only use when a major transition actually occurs.
 MEMORY TAGS: [REMEMBER: fact] — permanently saves something you must keep respecting on every future turn. There is no other way for the player to set standing instructions, so use this proactively for two kinds of things:
 (a) Important continuity facts — secrets learned, promises made, deals struck, items given away, injuries sustained.
